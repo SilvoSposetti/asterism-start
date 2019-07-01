@@ -2,6 +2,7 @@
 
 A lightweight Vulkan renderer.
 
+This application is developed for 64-bit systems only.
 
 ## Getting Started: [Windows]
 
