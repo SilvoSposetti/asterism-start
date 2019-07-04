@@ -24,8 +24,10 @@ This application is developed for 64-bit systems only.
 
 ## License
 
-This project is licensed under the GNU GPL v3.0 - see the [LICENSE](LICENSE.md) file for details.
+This project is licensed under the GNU GPL v3.0 - see [LICENSE](LICENSE.md) for details.
 
 
 ## Acknowledgments
+* I used the amazing [Vulkan Tutorial](https://vulkan-tutorial.com/Introduction) made by [Alexander Overvoorde](https://github.com/Overv) to get started with the Vulkan API.
+
 
