@@ -27,6 +27,15 @@ find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan)
 
+########################################################################################################################
+# GLM:
+
+# Include the header:
+set(INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/ext/glm/)
+include_directories(${INCLUDE_DIRS})
+
+# GLM is a header only library, so no need to link with the precompiled binaries
+
 ########################################################################################################################\
 # Compile Definitions:
 if (WIN32) # On Windows:

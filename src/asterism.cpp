@@ -1,6 +1,7 @@
 // External libraries:
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 // Other libraries:
 #include <iostream>
@@ -8,6 +9,7 @@
 #include <vector>
 #include <set>
 #include <fstream> // used to load shader SPIR-V binaries
+#include <array>
 
 class Asterism {
 public:
@@ -68,10 +70,65 @@ private:
     size_t currentFrame = 0;
     std::vector<VkFence> inFlightFences;
 
+    VkBuffer vertexBuffer = nullptr;
+    VkDeviceMemory vertexBufferMemory = nullptr;
+
+    bool frameBufferResized = false;
+
     struct SwapChainSupportDetails {
         VkSurfaceCapabilitiesKHR capabilities;
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
+    };
+
+
+    struct Vertex {
+        glm::vec2 pos;
+        glm::vec3 color;
+
+        static VkVertexInputBindingDescription getBindingDescription() {
+            // All of the per-vertex data is packed into one array, so only one binding
+            VkVertexInputBindingDescription bindingDescription = {};
+            // 'binding' specifies the index of the binding in the array of bindings
+            bindingDescription.binding = 0;
+            // 'stride' defines the number of bytes from one entry to the next
+            bindingDescription.stride = sizeof(Vertex);
+            // VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
+            // VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
+            bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            return bindingDescription;
+        }
+
+        static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+            std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+
+            // Position:
+            attributeDescriptions[0].binding = 0;
+            attributeDescriptions[0].location = 0;
+            // Typical formats used:
+            // float: VK_FORMAT_R32_SFLOAT
+            // vec2: VK_FORMAT_R32G32_SFLOAT
+            // vec3: VK_FORMAT_R32G32B32_SFLOAT
+            // vec4: VK_FORMAT_R32G32B32A32_SFLOAT
+            attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+            // 'offset' specifies the offset from the beginning of the struct
+            attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+            // Color:
+            attributeDescriptions[1].binding = 0;
+            attributeDescriptions[1].location = 1;
+            attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+            attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+            return attributeDescriptions;
+        }
+    };
+
+    // This is called 'interleaving' vertex attributes
+    const std::vector<Vertex> vertices = {
+            {{0.0f,  -0.9f}, {1.0f, 0.0f, 0.0f}},
+            {{0.9f,  0.9f},  {0.0f, 1.0f, 0.0f}},
+            {{-0.9f, 0.9f},  {0.0f, 0.0f, 1.0f}}
     };
 
 
@@ -102,15 +159,30 @@ private:
 
     static void VK_CHECK(VkResult result) {
         if (result != VK_SUCCESS) {
-            throw std::runtime_error("Something Went Wrong");
+            throw std::runtime_error("Something went wrong");
         }
     }
 
     void initializeWindow() {
         glfwInit();
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Tell GLFW not to create an OpenGL context.
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // Block window resize
+        // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // Block window resize
+
         window = glfwCreateWindow(WIDTH, HEIGHT, asterismName, nullptr, nullptr);
+
+        glfwSetWindowUserPointer(window, this);
+        glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
+    }
+
+    static void frameBufferResizeCallback(GLFWwindow *window, int width, int height) {
+        auto *app = reinterpret_cast<Asterism *>(glfwGetWindowUserPointer(window));
+        app->frameBufferResized = true;
+
+        if (width == 0 or height == 0) {
+            std::cout << "Window has been minimized" << std::endl;
+        } else {
+            std::cout << "Window has been resized (" << width << "x" << height << ")" << std::endl;
+        }
     }
 
     void createInstance() {
@@ -231,7 +303,7 @@ private:
         if (queueFamilyGraphicsIndexFound == -1 || queueFamilyPresentIndexFound == -1) {
             throw std::runtime_error("GPU doesn't support necessary queues!");
         } else {
-            // Note that it's very likely that these queues end up beign the same after all
+            // Note that it's very likely that these queues end up being the same after all
             queueFamilyGraphics = queueFamilyGraphicsIndexFound;
             std::cout << "Chosen graphics and compute queue indexed at " << queueFamilyGraphicsIndexFound << std::endl;
             queueFamilyPresent = queueFamilyPresentIndexFound;
@@ -319,7 +391,10 @@ private:
             std::numeric_limits<uint32_t>::max()) {
             return capabilities.currentExtent;
         } else {
-            VkExtent2D actualExtent = {WIDTH, HEIGHT};
+            int width;
+            int height;
+            glfwGetFramebufferSize(window, &width, &height);
+            VkExtent2D actualExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 
             actualExtent.width =
                     std::max(capabilities.minImageExtent.width,
@@ -357,10 +432,10 @@ private:
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
         swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         if (swapChainAdequate) {
-            std::cout << ", and itself it supports some capabilities, surface formats, and presentation modes"
+            std::cout << ", and itself it supports surface formats and presentation modes"
                       << std::endl;
         } else {
-            throw std::runtime_error("Swapchain doesn't support capabilities, surface formats, or presentation modes");
+            throw std::runtime_error("Swapchain doesn't support surface formats or presentation modes");
         }
 
         // Choose surface format (Color depth)
@@ -384,8 +459,8 @@ private:
         swapchainCreateInfo.imageFormat = surfaceFormat.format;
         swapchainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
         swapchainCreateInfo.imageExtent = extent;
-        swapchainCreateInfo.imageArrayLayers = 1; // more than 1 if creating a stereoscopic view application.
-        // If first want to render and then apply post-processing to the image, then need to use VK_IMAGE_USAGE_TRANSFER_DST_BIT as imageUse
+        swapchainCreateInfo.imageArrayLayers = 1; // more than 1 if creating a stereoscopic view application. (e.g. VR)
+        // If first want to render and then apply post-processing to the image, then need to use VK_IMAGE_USAGE_TRANSFER_DST_BIT as imageUsage
         swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         if (queueFamilyGraphics != queueFamilyPresent) {
             // In VK_SHARING_MODE_CONCURRENT images can be used across multiple queue families without explicit ownership transfer.
@@ -455,8 +530,6 @@ private:
 
     void createRenderPass() {
 
-
-
         //###################################################
         // Attachment description:
         VkAttachmentDescription attachmentDescription = {};
@@ -500,15 +573,15 @@ private:
         //###################################################
         // Subpass dependencies:
         // Basically ensures that the render passes can't begin until the image is available
-        VkSubpassDependency dependency = {};
+        VkSubpassDependency subpassDependency = {};
         // VK_SUBPASS_EXTERNAL refers to the implicit subpass before or after the render pass
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
+        subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        subpassDependency.dstSubpass = 0;
         // Specify the operations that need to wait in the stages that these operations occur
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpassDependency.srcAccessMask = 0;
+        subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 
         //###################################################
@@ -520,7 +593,7 @@ private:
         renderPassCreateInfo.subpassCount = 1;
         renderPassCreateInfo.pSubpasses = &subpass;
         renderPassCreateInfo.dependencyCount = 1;
-        renderPassCreateInfo.pDependencies = &dependency;
+        renderPassCreateInfo.pDependencies = &subpassDependency;
 
         VK_CHECK(vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass));
 
@@ -598,14 +671,17 @@ private:
 
         //###################################################
         // Vertex shader input:
+        auto bindingDescription = Vertex::getBindingDescription();
+        auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
         VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         // Bindings indicate the spacing between data and whether the data is per-vertex or per-instance (instancing)
-        vertexInputInfo.vertexBindingDescriptionCount = 0;
-        vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
         // Attribute descriptions: type of the attributes passed to the vertex shader
-        vertexInputInfo.vertexAttributeDescriptionCount = 0;
-        vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 
         //###################################################
@@ -810,6 +886,62 @@ private:
         VK_CHECK(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool));
     }
 
+
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+            if (typeFilter & ((uint32_t) 1 << i) &&
+                (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+                return i;
+            }
+        }
+
+        throw std::runtime_error("failed to find suitable memory type!");
+    }
+
+    void createVertexBuffer() {
+
+        // Buffer Creation:
+        VkBufferCreateInfo bufferCreateInfo = {};
+        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        // 'size' specifies the size of the buffer in bytes
+        bufferCreateInfo.size = sizeof(vertices[0]) * vertices.size();
+        // multiple usages can be specified with a bitwise OR
+        bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        // like images in swapchain, buffers can be owned by a specific queue family or shared across some.
+        bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        // Create vertex buffer:
+        VK_CHECK(vkCreateBuffer(device, &bufferCreateInfo, nullptr, &vertexBuffer));
+
+        // Memory Requirements and Allocation:
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
+
+        VkMemoryAllocateInfo memoryAllocateInfo = {};
+        memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memoryAllocateInfo.allocationSize = memRequirements.size;
+        // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ensures that memory used by CPU and GPU is coherent
+        memoryAllocateInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits,
+                                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+        VK_CHECK(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &vertexBufferMemory));
+
+        // If allocation is successful, then the memory can be associated with the buffer.
+        // The fourth parameter is the offset within the region of memory. If the offset is non-zero, then it is
+        // required to be divisible by memRequirements.alignment
+        vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+
+        // Filling the Vertex Buffer:
+        void *data;
+        vkMapMemory(device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
+        memcpy(data, vertices.data(), (size_t) bufferCreateInfo.size);
+        vkUnmapMemory(device, vertexBufferMemory);
+    }
+
     void createCommandBuffers() {
         commandBuffers.resize(swapchainFrameBuffers.size());
 
@@ -857,13 +989,18 @@ private:
             // Can now bind the graphics pipeline:
             vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
+            // Also, can bind the vertexBuffer:
+            VkBuffer vertexBuffers[] = {vertexBuffer};
+            VkDeviceSize offsets[] = {0};
+            vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
             // Draw command:
             // Inputs are: (in order)
             // vertexCount defines how many vertices need to be drawn
             // instanceCount used for instance rendering, 1 if instance rendering isn't used
             // firstVertex defines the lowest value of gl_VertexIndex
             // firstInstance defines the lowest value of gl_InstanceIndex
-            vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+            vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 
             // End render pass:
             vkCmdEndRenderPass(commandBuffers[i]);
@@ -910,8 +1047,46 @@ private:
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
+        createVertexBuffer();
         createCommandBuffers();
         createSyncObjects();
+    }
+
+    void recreateSwapchain() {
+        // Handle minimization:
+        int width = 0;
+        int height = 0;
+        while (width == 0 || height == 0) {
+            glfwGetFramebufferSize(window, &width, &height);
+            glfwWaitEvents();
+        }
+
+        // Wait for resources to be available
+        vkDeviceWaitIdle(device);
+
+        // Destroy all VK entities that have to do with the current swapchain
+        cleanupSwapchain();
+
+        // Create them with the correct values again
+        createSwapchain();
+        createImageViews();
+        createRenderPass();
+        createGraphicsPipeline();
+        createFramebuffers();
+        createCommandBuffers();
+    }
+
+    void cleanupSwapchain() {
+        for (VkFramebuffer frameBuffer : swapchainFrameBuffers) {
+            vkDestroyFramebuffer(device, frameBuffer, nullptr);
+        }
+        vkDestroyPipeline(device, graphicsPipeline, nullptr);
+        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+        vkDestroyRenderPass(device, renderPass, nullptr);
+        for (VkImageView imageView : swapchainImageViews) {
+            vkDestroyImageView(device, imageView, nullptr);
+        }
+        vkDestroySwapchainKHR(device, swapchain, nullptr);
     }
 
 
@@ -922,16 +1097,22 @@ private:
         // The last parameter is a timeout for the next frame to become available and setting it to the maximum 64-bit
         // unsigned int disables the timeout
         vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max());
-        vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
         //###################################################
         // 1. Acquire an image from the swapchain (swapchain is an extension, so we require the vk*KHR naming convention)
         uint32_t imageIndex;
         // The third parameter specifies a timeout in nanoseconds for an image to become available,
         // using the maximum value of 64 bit unsigned integer disables the timeout.
-        vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(),
-                              imageAvailableSemaphores[currentFrame],
-                              VK_NULL_HANDLE, &imageIndex);
+        VkResult acquireNextImageResult = vkAcquireNextImageKHR(device, swapchain, std::numeric_limits<uint64_t>::max(),
+                                                                imageAvailableSemaphores[currentFrame],
+                                                                VK_NULL_HANDLE, &imageIndex);
+
+        if (acquireNextImageResult == VK_ERROR_OUT_OF_DATE_KHR) {
+            recreateSwapchain();
+            return;
+        } else if (acquireNextImageResult != VK_SUCCESS && acquireNextImageResult != VK_SUBOPTIMAL_KHR) {
+            throw std::runtime_error("failed to acquire swapchjain image");
+        }
 
         //###################################################
         // 2. Submitting and executing the command buffer with that image as attachment in the framebuffer
@@ -954,6 +1135,9 @@ private:
 
         // Submit commands to the queue: (last parameter defines an optional fence to be signaled when the command buffer finishes execution)
         // This fence corresponds to the inFlightFence that is used to synchronise the CPU with the GPU
+
+        vkResetFences(device, 1, &inFlightFences[currentFrame]);
+
         VK_CHECK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]));
 
         //###################################################
@@ -972,7 +1156,15 @@ private:
         // which is not really necessary for a single swapchain, since the return value of the present function can be used
         presentInfo.pResults = nullptr; // Optional
 
-        vkQueuePresentKHR(presentQueue, &presentInfo);
+        VkResult queuePresentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+        if (queuePresentResult == VK_ERROR_OUT_OF_DATE_KHR || queuePresentResult == VK_SUBOPTIMAL_KHR ||
+            frameBufferResized) {
+            frameBufferResized = false;
+            recreateSwapchain();
+        } else if (queuePresentResult != VK_SUCCESS) {
+            throw std::runtime_error("failed to present swap chain image");
+        }
 
         // If the CPU is submitting work faster than the GPU can keep up, the queue will slowly fill up with work.
         // To avoid this, we can allow a certain amount of frames to be 'in-flight' while still bounding the amount
@@ -997,16 +1189,11 @@ private:
             vkDestroyFence(device, inFlightFences[i], nullptr);
         }
         vkDestroyCommandPool(device, commandPool, nullptr);
-        for (VkFramebuffer frameBuffer : swapchainFrameBuffers) {
-            vkDestroyFramebuffer(device, frameBuffer, nullptr);
-        }
-        vkDestroyPipeline(device, graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-        vkDestroyRenderPass(device, renderPass, nullptr);
-        for (VkImageView imageView : swapchainImageViews) {
-            vkDestroyImageView(device, imageView, nullptr);
-        }
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
+
+        cleanupSwapchain();
+
+        vkDestroyBuffer(device, vertexBuffer, nullptr);
+        vkFreeMemory(device, vertexBufferMemory, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);
