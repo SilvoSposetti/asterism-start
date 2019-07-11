@@ -72,6 +72,8 @@ private:
 
     VkBuffer vertexBuffer = nullptr;
     VkDeviceMemory vertexBufferMemory = nullptr;
+    VkBuffer indexBuffer = nullptr;
+    VkDeviceMemory indexBufferMemory = nullptr;
 
     bool frameBufferResized = false;
 
@@ -124,11 +126,18 @@ private:
         }
     };
 
-    // This is called 'interleaving' vertex attributes
+    // This is called 'interleaving' vertex attributes (position and color are interleaved together)
     const std::vector<Vertex> vertices = {
-            {{0.0f,  -0.9f}, {1.0f, 0.0f, 0.0f}},
-            {{0.9f,  0.9f},  {0.0f, 1.0f, 0.0f}},
-            {{-0.9f, 0.9f},  {0.0f, 0.0f, 1.0f}}
+            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+            {{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{0.5f,  0.5f},  {0.0f, 0.0f, 1.0f}},
+            {{-0.5f, 0.5f},  {1.0f, 1.0f, 1.0f}}
+    };
+
+    // Vertex indices for the index buffer
+    // either uint16_t or uint32_t can be used depending on the amount of vertices used (>=65535)
+    const std::vector<uint16_t> vertexIndices = {
+            0, 1, 2, 2, 3, 0
     };
 
 
@@ -901,45 +910,155 @@ private:
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
-    void createVertexBuffer() {
+    void createBuffer(VkDeviceSize size,
+                      VkBufferUsageFlags usage,
+                      VkMemoryPropertyFlags properties,
+                      VkBuffer &buffer,
+                      VkDeviceMemory &bufferMemory) {
 
         // Buffer Creation:
         VkBufferCreateInfo bufferCreateInfo = {};
         bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         // 'size' specifies the size of the buffer in bytes
-        bufferCreateInfo.size = sizeof(vertices[0]) * vertices.size();
+        bufferCreateInfo.size = size;
         // multiple usages can be specified with a bitwise OR
-        bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        bufferCreateInfo.usage = usage;
         // like images in swapchain, buffers can be owned by a specific queue family or shared across some.
         bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         // Create vertex buffer:
-        VK_CHECK(vkCreateBuffer(device, &bufferCreateInfo, nullptr, &vertexBuffer));
+        VK_CHECK(vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer));
 
         // Memory Requirements and Allocation:
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
+        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
 
         VkMemoryAllocateInfo memoryAllocateInfo = {};
         memoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         memoryAllocateInfo.allocationSize = memRequirements.size;
         // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ensures that memory used by CPU and GPU is coherent
-        memoryAllocateInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits,
-                                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        memoryAllocateInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-        VK_CHECK(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &vertexBufferMemory));
+        VK_CHECK(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &bufferMemory));
 
         // If allocation is successful, then the memory can be associated with the buffer.
         // The fourth parameter is the offset within the region of memory. If the offset is non-zero, then it is
         // required to be divisible by memRequirements.alignment
-        vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+        vkBindBufferMemory(device, buffer, bufferMemory, 0);
 
-        // Filling the Vertex Buffer:
+
+    }
+
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+        // Memory transfer operations are executed using command buffers, therefore a temporary command buffer allocation is needed.
+        VkCommandBufferAllocateInfo commandBufferAllocateInfo = {};
+        commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        commandBufferAllocateInfo.commandPool = commandPool;
+        commandBufferAllocateInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer);
+
+        // Record the temporary command buffer:
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // command buffer is only used once
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        VkBufferCopy copyRegion = {};
+        copyRegion.srcOffset = 0; // Optional
+        copyRegion.dstOffset = 0; // Optional
+        copyRegion.size = size;
+        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+        // This command buffer only contains the copy command, so can stop recording after it.
+        vkEndCommandBuffer(commandBuffer);
+
+        // Now, submit it for execution:
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(graphicsQueue);
+
+        // Clean up the command buffer used for transfer operation
+        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+    }
+
+    void createVertexBuffer() {
+        // Here the objective is to use a vertex buffer using the most optimal memory type, the VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT flag.
+        // Usually this type of memory (GPU local memory) is not accessible to the CPU on dedicated graphics card.
+        // The solution is to first fill a staging buffer accessible to the CPU, and then copy the content of the
+        // staging buffer into the other local buffer, the one which is actually used.
+
+        // Thus the staging buffer has the VK_BUFFER_USAGE_TRANSFER_SRC_BIT flag as it is used as source in the memory transfer operation,
+        // the actual buffer has the VK_BUFFER_USAGE_TRANSFER_DST_BIT flag as it is used as destination in the memory transfer operation.
+
+        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+        // 'stagingBuffer' is a host visible buffer and is only temporary
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+
+        createBuffer(bufferSize,
+                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                     stagingBuffer,
+                     stagingBufferMemory);
+
+        // Filling the Staging Buffer:
         void *data;
-        vkMapMemory(device, vertexBufferMemory, 0, bufferCreateInfo.size, 0, &data);
-        memcpy(data, vertices.data(), (size_t) bufferCreateInfo.size);
-        vkUnmapMemory(device, vertexBufferMemory);
+        vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+        memcpy(data, vertices.data(), (size_t) bufferSize);
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        // 'vertexBuffer' is the device local buffer and is used as vertex buffer
+        createBuffer(bufferSize,
+                     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                     vertexBuffer,
+                     vertexBufferMemory);
+
+        // Copy the content from one buffer to the other:
+        copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
+    }
+
+    void createIndexBuffer() {
+        // The same that's said for the vertex buffer also applies to the index buffer
+        // The usage of the actual buffer is different (VK_BUFFER_USAGE_INDEX_BUFFER_BIT instead of VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
+
+        VkDeviceSize bufferSize = sizeof(vertexIndices[0]) * vertexIndices.size();
+
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                     stagingBuffer,
+                     stagingBufferMemory);
+
+        void *data;
+        vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0,
+                    &data);
+        memcpy(data, vertexIndices.data(), (size_t) bufferSize);
+        vkUnmapMemory(device, stagingBufferMemory);
+
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                     indexBuffer,
+                     indexBufferMemory);
+
+        copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
+
     }
 
     void createCommandBuffers() {
@@ -994,14 +1113,16 @@ private:
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
+            // And the index buffer: (index type is decided by the index type)
+            vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
             // Draw command:
             // Inputs are: (in order)
             // vertexCount defines how many vertices need to be drawn
             // instanceCount used for instance rendering, 1 if instance rendering isn't used
             // firstVertex defines the lowest value of gl_VertexIndex
             // firstInstance defines the lowest value of gl_InstanceIndex
-            vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
-
+            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(vertexIndices.size()), 1, 0, 0, 0);
             // End render pass:
             vkCmdEndRenderPass(commandBuffers[i]);
 
@@ -1048,6 +1169,7 @@ private:
         createFramebuffers();
         createCommandPool();
         createVertexBuffer();
+        createIndexBuffer();
         createCommandBuffers();
         createSyncObjects();
     }
@@ -1194,6 +1316,10 @@ private:
 
         vkDestroyBuffer(device, vertexBuffer, nullptr);
         vkFreeMemory(device, vertexBufferMemory, nullptr);
+
+        vkDestroyBuffer(device, indexBuffer, nullptr);
+        vkFreeMemory(device, indexBufferMemory, nullptr);
+
         vkDestroyDevice(device, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);
