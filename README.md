@@ -1,4 +1,4 @@
-# Asterism ![](https://img.shields.io/github/license/SilvoSposetti/asterism.svg) ![](https://img.shields.io/github/repo-size/SilvoSposetti/asterism.svg) ![](https://img.shields.io/github/languages/code-size/SilvoSposetti/asterism.svg)
+# Asterism ![](https://img.shields.io/github/license/SilvoSposetti/asterism.svg) ![](https://img.shields.io/github/languages/code-size/SilvoSposetti/asterism.svg)
 
 A lightweight Vulkan renderer.
 

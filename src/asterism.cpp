@@ -3,6 +3,12 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
+
+#include <glm/gtc/matrix_transform.hpp>
+
+
 // Other libraries:
 #include <iostream>
 #include <stdexcept>
@@ -10,6 +16,7 @@
 #include <set>
 #include <fstream> // used to load shader SPIR-V binaries
 #include <array>
+#include <chrono>
 
 class Asterism {
 public:
@@ -53,6 +60,7 @@ private:
     std::vector<VkImageView> swapchainImageViews;
 
     VkRenderPass renderPass = nullptr;
+    VkDescriptorSetLayout descriptorSetLayout = nullptr;
     VkPipelineLayout pipelineLayout = nullptr;
 
     VkPipeline graphicsPipeline = nullptr;
@@ -60,6 +68,9 @@ private:
     std::vector<VkFramebuffer> swapchainFrameBuffers;
 
     VkCommandPool commandPool = nullptr;
+
+    VkDescriptorPool descriptorPool = nullptr;
+    std::vector<VkDescriptorSet> descriptorSets;
 
     std::vector<VkCommandBuffer> commandBuffers;
 
@@ -70,10 +81,14 @@ private:
     size_t currentFrame = 0;
     std::vector<VkFence> inFlightFences;
 
+    // Buffers:
     VkBuffer vertexBuffer = nullptr;
     VkDeviceMemory vertexBufferMemory = nullptr;
     VkBuffer indexBuffer = nullptr;
     VkDeviceMemory indexBufferMemory = nullptr;
+    std::vector<VkBuffer> uniformBuffers;
+    std::vector<VkDeviceMemory> uniformBuffersMemory;
+
 
     bool frameBufferResized = false;
 
@@ -140,6 +155,12 @@ private:
             0, 1, 2, 2, 3, 0
     };
 
+    struct UniformBufferObject {
+        // Uniforms must be properly aligned!
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    };
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice vkPhysicalDevice) {
         SwapChainSupportDetails details;
@@ -609,6 +630,29 @@ private:
 
     }
 
+    void createDescriptorSetLayout() {
+        VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+        uboLayoutBinding.binding = 0;
+        // Type of the binding:
+        uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        // 'descriptorCount' specifies the amount of uniforms that we want to bind
+        uboLayoutBinding.descriptorCount = 1;
+        // 'stageFlags' specifies in which stage the uniform(s) need to be bound
+        // the flag can be a combination of VkShaderStageFlagBits or it can simply be VK_SHADER_STAGE_ALL_GRAPHICS
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        // 'pImmutableSamplers' is only relevant to image sampling descriptors
+        uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+        // Create the set layout
+        VkDescriptorSetLayoutCreateInfo setLayoutCreateInfo = {};
+        setLayoutCreateInfo.sType =
+                VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        setLayoutCreateInfo.bindingCount = 1;
+        setLayoutCreateInfo.pBindings = &uboLayoutBinding;
+
+        VK_CHECK(vkCreateDescriptorSetLayout(device, &setLayoutCreateInfo, nullptr, &descriptorSetLayout));
+    };
+
 
     static std::vector<char> readFile(const std::string &filename) {
         // ate flag: start reading at the end of the file
@@ -746,7 +790,7 @@ private:
         // Cull mode: can cull back-facing triangles, front-facing, both, or none
         rasterizationStateCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
         // Front face: choose if front-face is going to be generated clockwise or counterclockwise
-        rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizationStateCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         // Depth bias: can alter the depth values by adding a constant value or biasing them based on a fragment's slope
         // (Sometime used for shadow mapping)
         rasterizationStateCreateInfo.depthBiasEnable = VK_FALSE;
@@ -822,8 +866,8 @@ private:
         // Pipeline layout: (pass variables to shaders at draw time (uniforms))
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 0; // Optional
-        pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+        pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout; // Inform the pipeline of the descriptors (e.g VBO) required during rendering
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
         pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -1049,7 +1093,8 @@ private:
         memcpy(data, vertexIndices.data(), (size_t) bufferSize);
         vkUnmapMemory(device, stagingBufferMemory);
 
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        createBuffer(bufferSize,
+                     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                      indexBuffer,
                      indexBufferMemory);
@@ -1058,6 +1103,81 @@ private:
 
         vkDestroyBuffer(device, stagingBuffer, nullptr);
         vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+    }
+
+    void createUniformBuffers() {
+        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+        uniformBuffers.resize(swapchainImages.size());
+        uniformBuffersMemory.resize(swapchainImages.size());
+        for (size_t i = 0; i < swapchainImages.size(); i++) {
+            createBuffer(bufferSize,
+                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                         uniformBuffers[i],
+                         uniformBuffersMemory[i]);
+        }
+    }
+
+    void createDescriptorPool() {
+        // First, specify the descriptor pool size
+        // There are as many descriptors as there are swapchain images
+        VkDescriptorPoolSize poolSize = {};
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = static_cast<uint32_t>(swapchainImages.size());
+
+        VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {};
+        descriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        descriptorPoolCreateInfo.poolSizeCount = 1;
+        descriptorPoolCreateInfo.pPoolSizes = &poolSize;
+        // 'maxSets' specifies the maximum amount of descriptor sets that may be allocated
+        descriptorPoolCreateInfo.maxSets = static_cast<uint32_t>(swapchainImages.size());
+
+        VK_CHECK(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
+    }
+
+    void createDescriptorSets() {
+        std::vector<VkDescriptorSetLayout> layouts(swapchainImages.size(), descriptorSetLayout);
+        VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = {};
+        descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptorSetAllocateInfo.descriptorPool = descriptorPool;
+        descriptorSetAllocateInfo.descriptorSetCount = static_cast<uint32_t>(swapchainImages.size());
+        descriptorSetAllocateInfo.pSetLayouts = layouts.data();
+
+
+        // Allocate descriptor sets:
+        descriptorSets.resize(swapchainImages.size());
+        VK_CHECK(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets.data()));
+
+        // The set has been allocated, but the descriptors within it still need to be configured:
+        for (size_t i = 0; i < swapchainImages.size(); i++) {
+            VkDescriptorBufferInfo descriptorBufferInfo = {};
+            descriptorBufferInfo.buffer = uniformBuffers[i];
+            descriptorBufferInfo.offset = 0;
+            // If the whole buffer is overwritten, then can also use the flag VK_WHOLE_SIZE for the 'range'
+            descriptorBufferInfo.range = sizeof(UniformBufferObject);
+
+            VkWriteDescriptorSet writeDescriptorSet = {};
+            writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            // 'dstSet' specifies the destination set
+            writeDescriptorSet.dstSet = descriptorSets[i];
+            // 'dstBinding' specifies the binding index
+            writeDescriptorSet.dstBinding = 0;
+            // 'dstArrayElement' specifies the first index in the array that needs to be updated.
+            // For the moment, no array is being used, thus index is set to 0
+            writeDescriptorSet.dstArrayElement = 0;
+            writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            writeDescriptorSet.descriptorCount = 1;
+            // 'pBufferInfo' is used for descriptors that refer to buffer data
+            writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
+            // 'pImageInfo' is used for descriptors that refer to image data
+            writeDescriptorSet.pImageInfo = nullptr; // Optional
+            // 'pTexelBufferView' is used for descriptors that refer to buffer views
+            writeDescriptorSet.pTexelBufferView = nullptr; // Optional
+
+            vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+        }
+
 
     }
 
@@ -1108,13 +1228,24 @@ private:
             // Can now bind the graphics pipeline:
             vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-            // Also, can bind the vertexBuffer:
+            // Also, can bind the vertex buffer:
             VkBuffer vertexBuffers[] = {vertexBuffer};
             VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-            // And the index buffer: (index type is decided by the index type)
+            // Also, the index buffer: (index type must be specified accordingly)
             vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+            // Also, the uniform buffer:
+            vkCmdBindDescriptorSets(commandBuffers[i],
+                                    VK_PIPELINE_BIND_POINT_GRAPHICS, // unlike vertex and index buffers, descriptor sets are not unique to graphics pipelines, thus need to specify
+                                    pipelineLayout, // layout that the descriptor is based on
+                                    0, // index of the first descriptor set
+                                    1, // number of sets to bind
+                                    &descriptorSets[i], // the array of sets to bind
+                                    0, // index in the array of offsets
+                                    nullptr); // array of offsets
+
 
             // Draw command:
             // Inputs are: (in order)
@@ -1129,9 +1260,8 @@ private:
             // Finished recording the command buffer:
             VK_CHECK(vkEndCommandBuffer(commandBuffers[i]));
         }
-
-
     }
+
 
     void createSyncObjects() {
         // Semaphores are best used for GPU <--> GPU synchronization
@@ -1165,11 +1295,15 @@ private:
         createSwapchain();
         createImageViews();
         createRenderPass();
+        createDescriptorSetLayout();
         createGraphicsPipeline();
         createFramebuffers();
         createCommandPool();
         createVertexBuffer();
         createIndexBuffer();
+        createUniformBuffers();
+        createDescriptorPool();
+        createDescriptorSets();
         createCommandBuffers();
         createSyncObjects();
     }
@@ -1195,6 +1329,9 @@ private:
         createRenderPass();
         createGraphicsPipeline();
         createFramebuffers();
+        createUniformBuffers();
+        createDescriptorPool();
+        createDescriptorSets();
         createCommandBuffers();
     }
 
@@ -1202,13 +1339,51 @@ private:
         for (VkFramebuffer frameBuffer : swapchainFrameBuffers) {
             vkDestroyFramebuffer(device, frameBuffer, nullptr);
         }
+
         vkDestroyPipeline(device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
         vkDestroyRenderPass(device, renderPass, nullptr);
+
         for (VkImageView imageView : swapchainImageViews) {
             vkDestroyImageView(device, imageView, nullptr);
         }
+
         vkDestroySwapchainKHR(device, swapchain, nullptr);
+
+        for (size_t i = 0; i < swapchainImages.size(); i++) {
+            vkDestroyBuffer(device, uniformBuffers[i], nullptr);
+            vkFreeMemory(device, uniformBuffersMemory[i], nullptr);
+        }
+
+        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+    }
+
+
+    void updateUniformBuffer(uint32_t currentImageIndex) {
+        static auto startTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+        UniformBufferObject ubo = {};
+        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        // It is important to use the current swapchain extent to calculate the aspect ratio
+        ubo.proj = glm::perspective(glm::radians(45.0f), // vertical field of view
+                                    swapchainExtent.width /
+                                    (float) swapchainExtent.height, // aspect ratio of the screen
+                                    0.1f, // near plane distance
+                                    10.0f); // far plane distance
+
+        // glm was designed with OpenGL in mind, where the y coordinate of the clip coordinates is inverted.
+        ubo.proj[1][1] *= -1;
+
+        // Once the uniforms have been computed, need to copy the data into the actual buffer
+        // In this case, a staging buffer is not the best option since the uniforms might change at each frame
+
+        void *data;
+        vkMapMemory(device, uniformBuffersMemory[currentImageIndex], 0, sizeof(ubo), 0, &data);
+        memcpy(data, &ubo, sizeof(ubo));
+        vkUnmapMemory(device, uniformBuffersMemory[currentImageIndex]);
     }
 
 
@@ -1236,8 +1411,14 @@ private:
             throw std::runtime_error("failed to acquire swapchjain image");
         }
 
+
         //###################################################
-        // 2. Submitting and executing the command buffer with that image as attachment in the framebuffer
+        // 2. SUpdate the uniform buffers since we now know which image is going to be used
+        updateUniformBuffer(imageIndex);
+
+
+        //###################################################
+        // 3. Submitting and executing the command buffer with that image as attachment in the framebuffer
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -1263,7 +1444,7 @@ private:
         VK_CHECK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]));
 
         //###################################################
-        // 3. Return the image to the swapchain for presentation
+        // 4. Return the image to the swapchain for presentation
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         // Specify which semaphores ot wait on before presentation can happen
@@ -1314,6 +1495,7 @@ private:
 
         cleanupSwapchain();
 
+        vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
         vkDestroyBuffer(device, vertexBuffer, nullptr);
         vkFreeMemory(device, vertexBufferMemory, nullptr);
 
