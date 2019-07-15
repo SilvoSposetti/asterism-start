@@ -13,14 +13,16 @@
 #include <array>
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
 
+#include "vulkan_core.h"
 
-#include "device.h"
 #include "vertex.h"
 #include "swapchain_support_details.h"
+#include "renderer_utility.h"
 
 class Renderer {
 public:
@@ -48,24 +50,28 @@ private:
     const uint32_t WIDTH = 1024;
     const uint32_t HEIGHT = 768;
 
+#ifndef NDEBUG
+    const bool isDebug = true;
+#else
+    const bool isDebug  = false;
+#endif
+
     const std::vector<const char *> deviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
 
     GLFWwindow *window = nullptr;
 
+    // Vulkan Core
     VkInstance instance = nullptr;
-
     VkSurfaceKHR surface = nullptr;
-
+    VkPhysicalDevice physicalDevice = nullptr;
+    VkDevice device = nullptr;
     uint32_t queueFamilyGraphics = 0;
     VkQueue graphicsQueue = nullptr;
     uint32_t queueFamilyPresent = 0;
     VkQueue presentQueue = nullptr;
 
-    VkPhysicalDevice physicalDevice = nullptr;
-
-    VkDevice device = nullptr;
 
     VkSwapchainKHR swapchain = nullptr;
 
@@ -105,7 +111,6 @@ private:
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
 
-
     bool frameBufferResized = false;
 
     void initializeWindow();
@@ -117,20 +122,6 @@ private:
     void cleanup();
 
     static void frameBufferResizeCallback(GLFWwindow *window, int width, int height);
-
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice vkPhysicalDevice);
-
-    void createInstance();
-
-    static bool isDiscreteGPU(VkPhysicalDevice device);
-
-    static bool isIntegratedGPU(VkPhysicalDevice device);
-
-    void pickPhysicalDevice();
-
-    void createLogicalDevice();
-
-    void createSurface();
 
     static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
 
@@ -180,6 +171,7 @@ private:
     void createCommandBuffers();
 
     void createSyncObjects();
+
     void recreateSwapchain();
 
     void cleanupSwapchain();
@@ -205,7 +197,6 @@ private:
 
 
 };
-
 
 
 struct UniformBufferObject {

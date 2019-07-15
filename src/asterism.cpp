@@ -1,13 +1,5 @@
 #include "renderer/renderer.h"
 
-// External libraries:
-#include <vulkan/vulkan.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-
-
-#include <glm/gtc/matrix_transform.hpp>
-
 
 class Asterism {
 public:
