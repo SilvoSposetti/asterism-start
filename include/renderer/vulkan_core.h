@@ -6,6 +6,7 @@
 #include <set>
 
 #include "renderer_utility.h"
+#include "queue_manager.h"
 
 class VulkanCore {
 public:
@@ -16,17 +17,9 @@ public:
 
     static VkPhysicalDevice createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
 
-    static void getQueueIndices(VkPhysicalDevice physicalDevice,
-                                VkSurfaceKHR surface,
-                                uint32_t &queueFamilyGraphics,
-                                uint32_t &queueFamilyPresent);
-
     static VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
                                         std::vector<const char *> deviceExtensions,
-                                        uint32_t &queueFamilyGraphics,
-                                        uint32_t &queueFamilyPresent,
-                                        VkQueue &graphicsQueue,
-                                        VkQueue &presentQueue);
+                                        QueueManager queues);
 
 private:
 

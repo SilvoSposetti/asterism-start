@@ -141,11 +141,11 @@ void Renderer::createSwapchain() {
     swapchainCreateInfo.imageArrayLayers = 1; // more than 1 if creating a stereoscopic view application. (e.g. VR)
     // If first want to render and then apply post-processing to the image, then need to use VK_IMAGE_USAGE_TRANSFER_DST_BIT as imageUsage
     swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    if (queueFamilyGraphics != queueFamilyPresent) {
+    if (queues.getFamilyIndex(GRAPHICS) != queues.getFamilyIndex(PRESENT)) {
         // In VK_SHARING_MODE_CONCURRENT images can be used across multiple queue families without explicit ownership transfer.
         swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchainCreateInfo.queueFamilyIndexCount = 2;
-        uint32_t queueFamilyIndices[] = {queueFamilyGraphics, queueFamilyPresent};
+        uint32_t queueFamilyIndices[] = {queues.getFamilyIndex(GRAPHICS), queues.getFamilyIndex(PRESENT)};
         swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
     } else {
         //VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and ownership must be explicitly transferred before using it in another queue family.
@@ -579,7 +579,7 @@ void Renderer::createFramebuffers() {
 void Renderer::createCommandPool() {
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commandPoolCreateInfo.queueFamilyIndex = queueFamilyGraphics;
+    commandPoolCreateInfo.queueFamilyIndex = queues.getFamilyIndex(GRAPHICS);
     // Possible flags:
     // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: Hint that command buffers are rerecorded with new commands very often (may change memory allocation behavior)
     // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: Allow command buffers to be rerecorded individually, without this flag they all have to be reset together
@@ -675,8 +675,8 @@ void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(graphicsQueue);
+    vkQueueSubmit(*queues.getQueue(GRAPHICS), 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(*queues.getQueue(GRAPHICS));
 
     // Clean up the command buffer used for transfer operation
     vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
@@ -941,16 +941,14 @@ void Renderer::initializeVulkan() {
     instance = VulkanCore::createInstance(asterismName, isDebug);
     surface = VulkanCore::createSurface(instance, window);
     physicalDevice = VulkanCore::createPhysicalDevice(instance, surface);
-    VulkanCore::getQueueIndices(physicalDevice,
-                                surface,
-                                queueFamilyGraphics,
-                                queueFamilyPresent);
-    device = VulkanCore::createLogicalDevice(physicalDevice,
-                                             deviceExtensions,
-                                             queueFamilyGraphics,
-                                             queueFamilyPresent,
-                                             graphicsQueue,
-                                             presentQueue);
+
+    queues.retrieveAvailableQueueIndices(physicalDevice, surface);
+
+    device = VulkanCore::createLogicalDevice(physicalDevice, deviceExtensions, queues);
+    // Store queue handles as soon as the device is created
+    queues.setQueues(device);
+
+
     // Vulkan Pipeline:
     createSwapchain();
     createImageViews();
@@ -1111,7 +1109,7 @@ void Renderer::drawFrame() {
 
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
-    VK_CHECK(vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]));
+    VK_CHECK(vkQueueSubmit(*queues.getQueue(GRAPHICS), 1, &submitInfo, inFlightFences[currentFrame]));
 
     //###################################################
     // 4. Return the image to the swapchain for presentation
@@ -1129,7 +1127,7 @@ void Renderer::drawFrame() {
     // which is not really necessary for a single swapchain, since the return value of the present function can be used
     presentInfo.pResults = nullptr; // Optional
 
-    VkResult queuePresentResult = vkQueuePresentKHR(presentQueue, &presentInfo);
+    VkResult queuePresentResult = vkQueuePresentKHR(*queues.getQueue(PRESENT), &presentInfo);
 
     if (queuePresentResult == VK_ERROR_OUT_OF_DATE_KHR || queuePresentResult == VK_SUBOPTIMAL_KHR ||
         frameBufferResized) {

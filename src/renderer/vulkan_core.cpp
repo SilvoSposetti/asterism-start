@@ -1,6 +1,15 @@
 #include "renderer/vulkan_core.h"
 
 VkInstance VulkanCore::createInstance(const char *asterismName, bool isDebug) {
+    std::cout << "*** Running " << asterismName << " in ";
+    if (isDebug) {
+        std::cout << "DEBUG";
+    } else {
+        std::cout << "RELEASE";
+    }
+    std::cout << " mode ***" << std::endl;
+
+
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     applicationInfo.pApplicationName = asterismName;
@@ -17,7 +26,7 @@ VkInstance VulkanCore::createInstance(const char *asterismName, bool isDebug) {
         };
         instanceCreateInfo.ppEnabledLayerNames = debugLayers;
         instanceCreateInfo.enabledLayerCount = sizeof(debugLayers) / sizeof(debugLayers[0]);
-        std::cout << ("Debug mode: Vulkan Validation Layers ENABLED") << std::endl;
+        std::cout << ("Validation Layers ENABLED") << std::endl;
     }
 
     uint32_t glfwExtensionCount = 0;
@@ -87,7 +96,7 @@ bool VulkanCore::isDiscreteGPU(VkPhysicalDevice device) {
     vkGetPhysicalDeviceProperties(device, &properties);
 
     if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-        printf("Found a discrete GPU: %s\n", properties.deviceName);
+        printf("Using discrete GPU: %s\n", properties.deviceName);
         return true;
     }
     return false;
@@ -98,63 +107,18 @@ bool VulkanCore::isIntegratedGPU(VkPhysicalDevice device) {
     vkGetPhysicalDeviceProperties(device, &properties);
 
     if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-        printf("Found an integrated GPU: %s\n", properties.deviceName);
+        printf("Using integrated GPU: %s\n", properties.deviceName);
         return true;
     }
     return false;
 }
 
-void VulkanCore::getQueueIndices(VkPhysicalDevice physicalDevice,
-                                 VkSurfaceKHR surface,
-                                 uint32_t &queueFamilyGraphics,
-                                 uint32_t &queueFamilyPresent) {
-
-    // Check that picked device supports all necessary queues
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-    int queueFamilyGraphicsIndexFound = -1;
-    for (int i = 0; i < queueFamilyCount; ++i) {
-        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT &&
-            queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
-            queueFamilyGraphicsIndexFound = i;
-        }
-    }
-
-    int queueFamilyPresentIndexFound = -1;
-    VkBool32 presentSupport = false;
-    for (int i = 0; i < queueFamilyCount; ++i) {
-        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
-        if (presentSupport) {
-            queueFamilyPresentIndexFound = i;
-            break;
-        }
-    }
-
-    if (queueFamilyGraphicsIndexFound == -1 || queueFamilyPresentIndexFound == -1) {
-        throw std::runtime_error("GPU doesn't support necessary queues!");
-    } else {
-        // Note that it's very likely that these queues end up being the same after all
-        queueFamilyGraphics = queueFamilyGraphicsIndexFound;
-        std::cout << "Chosen graphics and compute queue indexed at " << queueFamilyGraphicsIndexFound << std::endl;
-        queueFamilyPresent = queueFamilyPresentIndexFound;
-        std::cout << "Chosen present queue indexed at " << queueFamilyPresentIndexFound << std::endl;
-    }
-
-
-}
-
 
 VkDevice VulkanCore::createLogicalDevice(VkPhysicalDevice physicalDevice,
                                          std::vector<const char *> deviceExtensions,
-                                         uint32_t &queueFamilyGraphics,
-                                         uint32_t &queueFamilyPresent,
-                                         VkQueue &graphicsQueue,
-                                         VkQueue &presentQueue) {
+                                         QueueManager queues) {
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {queueFamilyGraphics, queueFamilyPresent};
+    std::set<uint32_t> uniqueQueueFamilies = {queues.getFamilyIndex(GRAPHICS), queues.getFamilyIndex(PRESENT)};
 
     float queuePriority = 1.0f;
     for (uint32_t queueFamily: uniqueQueueFamilies) {
@@ -178,10 +142,6 @@ VkDevice VulkanCore::createLogicalDevice(VkPhysicalDevice physicalDevice,
 
     VkDevice device;
     VK_CHECK(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device), "Failed to create device");
-
-    // Retrieve queue handles as soon as the device is created
-    vkGetDeviceQueue(device, queueFamilyGraphics, 0, &graphicsQueue);
-    vkGetDeviceQueue(device, queueFamilyPresent, 0, &presentQueue);
 
     return device;
 }
