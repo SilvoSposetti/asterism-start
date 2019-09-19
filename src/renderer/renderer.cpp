@@ -141,11 +141,11 @@ void Renderer::createSwapchain() {
     swapchainCreateInfo.imageArrayLayers = 1; // more than 1 if creating a stereoscopic view application. (e.g. VR)
     // If first want to render and then apply post-processing to the image, then need to use VK_IMAGE_USAGE_TRANSFER_DST_BIT as imageUsage
     swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    if (queues.getFamilyIndex(GRAPHICS) != queues.getFamilyIndex(PRESENT)) {
+    if (queues.getFamilyIndex(GRAPHICS_QUEUE) != queues.getFamilyIndex(PRESENT_QUEUE)) {
         // In VK_SHARING_MODE_CONCURRENT images can be used across multiple queue families without explicit ownership transfer.
         swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchainCreateInfo.queueFamilyIndexCount = 2;
-        uint32_t queueFamilyIndices[] = {queues.getFamilyIndex(GRAPHICS), queues.getFamilyIndex(PRESENT)};
+        uint32_t queueFamilyIndices[] = {queues.getFamilyIndex(GRAPHICS_QUEUE), queues.getFamilyIndex(PRESENT_QUEUE)};
         swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
     } else {
         //VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and ownership must be explicitly transferred before using it in another queue family.
@@ -303,47 +303,49 @@ void Renderer::createDescriptorSetLayout() {
 }
 
 
-std::vector<char> Renderer::readFile(const std::string &filename) {
-    // ate flag: start reading at the end of the file
-    // binary flag: read t as binary (avoid text transformations)
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file " + filename);
-    }
-    // The advantage from reading at the end is that we can use the read position to determine file size
-    // and allocate a buffer
-    size_t fileSize = (size_t) file.tellg();
-    std::vector<char> buffer(fileSize);
+//std::vector<char> Renderer::readFile(const std::string &filename) {
+//    // ate flag: start reading at the end of the file
+//    // binary flag: read t as binary (avoid text transformations)
+//    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+//    if (!file.is_open()) {
+//        throw std::runtime_error("Failed to open file " + filename);
+//    }
+//    // The advantage from reading at the end is that we can use the read position to determine file size
+//    // and allocate a buffer
+//    size_t fileSize = (size_t) file.tellg();
+//    std::vector<char> buffer(fileSize);
+//
+//    // Then go back at the beginning of the file and read all of the bytes
+//    file.seekg(0);
+//    file.read(buffer.data(), fileSize);
+//
+//    file.close();
+//    return buffer;
+//}
 
-    // Then go back at the beginning of the file and read all of the bytes
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
-
-    file.close();
-    return buffer;
-}
-
-VkShaderModule Renderer::createShaderModule(const std::vector<char> &code) {
-    // need to wrap the code in a VkShaderModule before passing it to the pipeline.
-    VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
-    shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shaderModuleCreateInfo.codeSize = code.size();
-    shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
-
-    VkShaderModule shaderModule = {};
-    VK_CHECK(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule));
-
-    return shaderModule;
-}
+//VkShaderModule Renderer::createShaderModule(const std::vector<char> &code) {
+//    // need to wrap the code in a VkShaderModule before passing it to the pipeline.
+//    VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
+//    shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+//    shaderModuleCreateInfo.codeSize = code.size();
+//    shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
+//
+//    VkShaderModule shaderModule = {};
+//    VK_CHECK(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule));
+//
+//    return shaderModule;
+//}
 
 void Renderer::createGraphicsPipeline() {
     //###################################################
     // Shader modules:
-    std::vector<char> vertShaderCode = readFile("F:/Git Repo/asterism/shaders/vert.spv");
-    std::vector<char> fragShaderCode = readFile("F:/Git Repo/asterism/shaders/frag.spv");
+//    std::vector<char> vertShaderCode = readFile();
+//    std::vector<char> fragShaderCode = readFile();
 
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+    VkShaderModule vertShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/vert.spv", device);
+    VkShaderModule fragShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/frag.spv", device);
+//    VkShaderModule vertShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/shader.vert", device);
+//    VkShaderModule fragShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/shader.frag", device);
 
     VkPipelineShaderStageCreateInfo vertShaderStageCreateInfo = {};
     vertShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -579,7 +581,7 @@ void Renderer::createFramebuffers() {
 void Renderer::createCommandPool() {
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commandPoolCreateInfo.queueFamilyIndex = queues.getFamilyIndex(GRAPHICS);
+    commandPoolCreateInfo.queueFamilyIndex = queues.getFamilyIndex(GRAPHICS_QUEUE);
     // Possible flags:
     // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: Hint that command buffers are rerecorded with new commands very often (may change memory allocation behavior)
     // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: Allow command buffers to be rerecorded individually, without this flag they all have to be reset together
@@ -675,8 +677,8 @@ void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize s
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(*queues.getQueue(GRAPHICS), 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(*queues.getQueue(GRAPHICS));
+    vkQueueSubmit(*queues.getQueue(GRAPHICS_QUEUE), 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(*queues.getQueue(GRAPHICS_QUEUE));
 
     // Clean up the command buffer used for transfer operation
     vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
@@ -1109,7 +1111,7 @@ void Renderer::drawFrame() {
 
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
-    VK_CHECK(vkQueueSubmit(*queues.getQueue(GRAPHICS), 1, &submitInfo, inFlightFences[currentFrame]));
+    VK_CHECK(vkQueueSubmit(*queues.getQueue(GRAPHICS_QUEUE), 1, &submitInfo, inFlightFences[currentFrame]));
 
     //###################################################
     // 4. Return the image to the swapchain for presentation
@@ -1127,14 +1129,14 @@ void Renderer::drawFrame() {
     // which is not really necessary for a single swapchain, since the return value of the present function can be used
     presentInfo.pResults = nullptr; // Optional
 
-    VkResult queuePresentResult = vkQueuePresentKHR(*queues.getQueue(PRESENT), &presentInfo);
+    VkResult queuePresentResult = vkQueuePresentKHR(*queues.getQueue(PRESENT_QUEUE), &presentInfo);
 
     if (queuePresentResult == VK_ERROR_OUT_OF_DATE_KHR || queuePresentResult == VK_SUBOPTIMAL_KHR ||
         frameBufferResized) {
         frameBufferResized = false;
         recreateSwapchain();
     } else if (queuePresentResult != VK_SUCCESS) {
-        throw std::runtime_error("failed to present swap chain image");
+        throw std::runtime_error("Failed to present swap chain image");
     }
 
     // If the CPU is submitting work faster than the GPU can keep up, the queue will slowly fill up with work.

@@ -9,7 +9,6 @@
 #include <stdexcept>
 #include <vector>
 #include <set>
-#include <fstream> // used to load shader SPIR-V binaries
 #include <array>
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
@@ -17,10 +16,10 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES
 
-
 #include "vulkan_core.h"
-#include "renderer/queue_manager.h"
+#include "queue_manager.h"
 #include "vertex.h"
+#include "shader_manager.h"
 #include "swapchain_support_details.h"
 #include "renderer_utility.h"
 
@@ -41,7 +40,8 @@ private:
     const bool isDebug  = false;
 #endif
 
-    const std::vector<QueueType> requiredQueues = {GRAPHICS, COMPUTE};
+    const std::vector<QueueType> requiredQueues = {GRAPHICS_QUEUE, COMPUTE_QUEUE};
+    const std::vector<ShaderType> requiredShaders = {VERTEX_SHADER, FRAGMENT_SHADER};
 
     const std::vector<const char *> deviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -85,7 +85,7 @@ private:
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
-    const int MAX_FRAMES_IN_FLIGHT = 2; //Todo: this should actually be the amount of images in the swapchain - 1?
+    const int MAX_FRAMES_IN_FLIGHT = 2; // Todo: this should actually be the amount of images in the swapchain - 1?
     size_t currentFrame = 0;
     std::vector<VkFence> inFlightFences;
 
@@ -123,9 +123,9 @@ private:
 
     void createDescriptorSetLayout();
 
-    static std::vector<char> readFile(const std::string &filename);
+//    static std::vector<char> readFile(const std::string &filename);
 
-    VkShaderModule createShaderModule(const std::vector<char> &code);
+//    VkShaderModule createShaderModule(const std::vector<char> &code);
 
     void createGraphicsPipeline();
 

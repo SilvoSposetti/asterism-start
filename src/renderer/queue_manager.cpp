@@ -3,7 +3,7 @@
 QueueManager::QueueManager(const std::vector<QueueType> &flags) {
     queueFlags = flags;
     // add the present queue to the necessary queues:
-    queueFlags.push_back(PRESENT);
+    queueFlags.push_back(PRESENT_QUEUE);
 
     numOfQueues = queueFlags.size();
     families.resize(numOfQueues);
@@ -21,19 +21,19 @@ void QueueManager::retrieveAvailableQueueIndices(VkPhysicalDevice physicalDevice
     // Find all required queues:
     std::vector<uint32_t> indicesFound(numOfQueues, invalidQueueIndex);
     for (uint32_t i = 0; i < numOfQueues; i++) {
-        if (queueFlags[i] == GRAPHICS) {
+        if (queueFlags[i] == GRAPHICS_QUEUE) {
             for (int j = 0; j < queueFamilyCount; ++j) {
                 if (queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                     indicesFound[i] = j;
                 }
             }
-        } else if (queueFlags[i] == COMPUTE) {
+        } else if (queueFlags[i] == COMPUTE_QUEUE) {
             for (int j = 0; j < queueFamilyCount; ++j) {
                 if (queueFamilies[j].queueFlags & VK_QUEUE_COMPUTE_BIT) {
                     indicesFound[i] = j;
                 }
             }
-        } else if (queueFlags[i] == PRESENT) {
+        } else if (queueFlags[i] == PRESENT_QUEUE) {
             VkBool32 presentSupport = false;
             for (int j = 0; j < queueFamilyCount; ++j) {
                 vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, j, surface, &presentSupport);
@@ -90,11 +90,11 @@ void QueueManager::printQueueInfo() {
     std::cout << "Queue family indices: " << std::endl;
     for (uint32_t i = 0; i < numOfQueues; ++i) {
         std::cout << "\t";
-        if (queueFlags[i] == GRAPHICS) {
+        if (queueFlags[i] == GRAPHICS_QUEUE) {
             std::cout << "Graphics";
-        } else if (queueFlags[i] == COMPUTE) {
+        } else if (queueFlags[i] == COMPUTE_QUEUE) {
             std::cout << "Compute";
-        } else if (queueFlags[i] == PRESENT) {
+        } else if (queueFlags[i] == PRESENT_QUEUE) {
             std::cout << "Present";
         }
         std::cout << " - " << families[i];

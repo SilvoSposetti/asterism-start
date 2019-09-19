@@ -19,8 +19,8 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 ########################################################################################################################
 # GLFW:
 # Include the header:
-set(INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/ext/glfw/include)
-include_directories(${INCLUDE_DIRS})
+set(GLFW_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/ext/glfw/include)
+include_directories(${GLFW_INCLUDE_DIRS})
 # Link static library:
 set(GLFW3_LIBRARY_DIR ${PROJECT_SOURCE_DIR}/ext/glfw/lib-mingw-w64)
 add_library(glfw3 STATIC IMPORTED)
@@ -34,8 +34,15 @@ target_include_directories(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 target_link_libraries(${PROJECT_NAME} Vulkan::Vulkan)
 
 ########################################################################################################################
-# GLM:
+# glslang:
+## Include the header:
+#set(GLSLANG_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/ext/glslang)
+#include_directories(${GLSLANG_INCLUDE_DIRS})
+## Link static library:
+#target_link_libraries(${PROJECT_NAME} glslang SPIRV)
 
+########################################################################################################################
+# GLM:
 # Include the header:
 set(INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/ext/glm/)
 include_directories(${INCLUDE_DIRS})
@@ -45,7 +52,7 @@ include_directories(${INCLUDE_DIRS})
 # Compile Definitions:
 if (WIN32) # On Windows:
     add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
-endif(WIN32)
-if(UNIX) # On Linux:
-#don't know yet, ToDo: Fill-in
-endif(UNIX)
+endif (WIN32)
+if (UNIX) # On Linux:
+    #don't know yet, ToDo: Fill-in
+endif (UNIX)

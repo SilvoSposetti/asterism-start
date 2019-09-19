@@ -118,7 +118,7 @@ VkDevice VulkanCore::createLogicalDevice(VkPhysicalDevice physicalDevice,
                                          std::vector<const char *> deviceExtensions,
                                          QueueManager queues) {
     std::vector<VkDeviceQueueCreateInfo> deviceQueueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {queues.getFamilyIndex(GRAPHICS), queues.getFamilyIndex(PRESENT)};
+    std::set<uint32_t> uniqueQueueFamilies = {queues.getFamilyIndex(GRAPHICS_QUEUE), queues.getFamilyIndex(PRESENT_QUEUE)};
 
     float queuePriority = 1.0f;
     for (uint32_t queueFamily: uniqueQueueFamilies) {

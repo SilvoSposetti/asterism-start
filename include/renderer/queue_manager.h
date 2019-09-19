@@ -6,9 +6,9 @@
 #include <iostream>
 
 enum QueueType {
-    GRAPHICS,
-    COMPUTE,
-    PRESENT
+    GRAPHICS_QUEUE,
+    COMPUTE_QUEUE,
+    PRESENT_QUEUE
 };
 
 class QueueManager {
