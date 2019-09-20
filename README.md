@@ -10,9 +10,6 @@ This application is developed for 64-bit systems only.
 
 * Install the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/).
 
-* Precombiled binaries of [GLFW](https://www.glfw.org/download.html) need to be placed into `ext/glfw` as they are not provided with the repo.
-
-* The same goes for [GLM](https://glm.g-truc.net/0.9.9/index.html), the library has to be manually placed under `ext/glm`.
 
 * [For the CLion editor]. Open the existing CMAKE project in the root folder, then set the default generation path to the `bin/mingw-debug` and the `bin/mingw-release` folders respectively (Settings -> Build, Execution, Deployment -> CMake -> Generation Path).
 
