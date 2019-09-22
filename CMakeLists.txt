@@ -6,9 +6,6 @@ project(${PROJECT_NAME} CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ToDo: check glslang include dir, also add proper print statements for all libraries
-# ToDo: update README.md
-# Todo: maybe add also vulkan as a submodule?
 ####################
 # Project files:
 
@@ -41,7 +38,7 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # Include the glfw headers:
 include_directories(${GLFW_DIR}/include)
-# Specify glfw cmakelists.txt location:
+# Specify glfw's cmakelists.txt location:
 add_subdirectory(${GLFW_DIR})
 # Link with GLFW:
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
@@ -59,15 +56,7 @@ include_directories(${GLFW_DIR}/include)
 ####################
 # Vulkan:
 find_package(Vulkan REQUIRED)
-target_include_directories(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
-target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan)
-
-
-########################################################################################################################\
-# Compile Definitions:
-if (WIN32) # On Windows:
-    add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
-endif (WIN32)
-if (UNIX) # On Linux:
-    # tba
-endif (UNIX)
+set(VULKAN_DIR $ENV{VULKAN_SDK})
+STRING(REGEX REPLACE "\\\\" "/" VULKAN_DIR ${VULKAN_DIR})
+include_directories(${VULKAN_DIR}/Include)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${VULKAN_DIR}/Lib/vulkan-1.lib)

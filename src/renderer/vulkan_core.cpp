@@ -22,7 +22,8 @@ VkInstance VulkanCore::createInstance(const char *asterismName, bool isDebug) {
     // Activate validation layer only in debug:
     if (isDebug) {
         const char *debugLayers[] = {
-                "VK_LAYER_LUNARG_standard_validation"
+                "VK_LAYER_LUNARG_standard_validation",
+                "VK_LAYER_LUNARG_monitor"
         };
         instanceCreateInfo.ppEnabledLayerNames = debugLayers;
         instanceCreateInfo.enabledLayerCount = sizeof(debugLayers) / sizeof(debugLayers[0]);

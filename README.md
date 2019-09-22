@@ -4,14 +4,29 @@ A lightweight Vulkan renderer.
 
 This application is developed for 64-bit systems only.
 
+
 ## Getting Started: [Windows]
 
-* Install [MinGW](https://sourceforge.net/projects/mingw-w64/).
+* Clone with the `--recurse-submodules` flag. [GLFW](https://github.com/glfw/glfw.git), [GLM](https://github.com/g-truc/glm.git), and [GLSLANG](https://github.com/KhronosGroup/glslang.git) are dependencies linked as git submodules.
+                  
+* Install [MinGW](https://sourceforge.net/projects/mingw-w64/) as compiler for the project.
 
-* Install the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/).
+* Install the latest [VulkanSDK](https://www.lunarg.com/vulkan-sdk/).
+
+* `bin` is the default build directory. [For CLion] Set, for example, the default generation path to the `bin/mingw-debug` and the `bin/mingw-release` folders respectively (Settings -> Build, Execution, Deployment -> CMake -> Generation Path).
 
 
-* [For the CLion editor]. Open the existing CMAKE project in the root folder, then set the default generation path to the `bin/mingw-debug` and the `bin/mingw-release` folders respectively (Settings -> Build, Execution, Deployment -> CMake -> Generation Path).
+## Folder Structure
+
+    .
+    ├── 📁 bin                 # Compiled files (gitignored)
+    ├── 📁 ext                 # External dependencies (git submodules)
+    ├── 📁 include             # Header files
+    ├── 📁 shaders             # Shader Code
+    ├── 📁 src                 # Source files
+    ├── 🖺 CMakeLists.txt      
+    ├── 🖺 LICENSE.md
+    └── 🖺 README.md
 
 
 ## Built With
@@ -19,6 +34,7 @@ This application is developed for 64-bit systems only.
 * [Vulkan](https://www.khronos.org/vulkan/) - 3D graphics and computing
 * [GLFW](https://www.glfw.org/) - Create and manage windows
 * [GLM](https://glm.g-truc.net/) - Linear algebra library
+* [GLSLANG](https://github.com/KhronosGroup/glslang.git) - Shader compilation
 * [CMake](https://cmake.org/) - Build system
 
 

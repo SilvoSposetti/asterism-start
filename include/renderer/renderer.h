@@ -2,7 +2,6 @@
 
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
-#include <iostream>
 
 // Other libraries:
 #include <iostream>
