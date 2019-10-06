@@ -6,6 +6,7 @@ project(${PROJECT_NAME} CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
 ####################
 # Project files:
 
@@ -51,6 +52,8 @@ set(GLSL_DIR ${PROJECT_SOURCE_DIR}/ext/glslang)
 add_subdirectory(${GLSL_DIR})
 # Include the glslang headers:
 include_directories(${GLFW_DIR}/include)
+# Link with GLSLANG and SPIRV
+target_link_libraries(${PROJECT_NAME} PUBLIC glslang SPIRV)
 
 
 ####################
@@ -60,3 +63,9 @@ set(VULKAN_DIR $ENV{VULKAN_SDK})
 STRING(REGEX REPLACE "\\\\" "/" VULKAN_DIR ${VULKAN_DIR})
 include_directories(${VULKAN_DIR}/Include)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${VULKAN_DIR}/Lib/vulkan-1.lib)
+
+####################
+# Definitions:
+add_definitions(-DSOURCE_DIR=\"${PROJECT_SOURCE_DIR}\")
+
+

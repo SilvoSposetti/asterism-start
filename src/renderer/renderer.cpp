@@ -302,50 +302,16 @@ void Renderer::createDescriptorSetLayout() {
     VK_CHECK(vkCreateDescriptorSetLayout(device, &setLayoutCreateInfo, nullptr, &descriptorSetLayout));
 }
 
-
-//std::vector<char> Renderer::readFile(const std::string &filename) {
-//    // ate flag: start reading at the end of the file
-//    // binary flag: read t as binary (avoid text transformations)
-//    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-//    if (!file.is_open()) {
-//        throw std::runtime_error("Failed to open file " + filename);
-//    }
-//    // The advantage from reading at the end is that we can use the read position to determine file size
-//    // and allocate a buffer
-//    size_t fileSize = (size_t) file.tellg();
-//    std::vector<char> buffer(fileSize);
-//
-//    // Then go back at the beginning of the file and read all of the bytes
-//    file.seekg(0);
-//    file.read(buffer.data(), fileSize);
-//
-//    file.close();
-//    return buffer;
-//}
-
-//VkShaderModule Renderer::createShaderModule(const std::vector<char> &code) {
-//    // need to wrap the code in a VkShaderModule before passing it to the pipeline.
-//    VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
-//    shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-//    shaderModuleCreateInfo.codeSize = code.size();
-//    shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
-//
-//    VkShaderModule shaderModule = {};
-//    VK_CHECK(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule));
-//
-//    return shaderModule;
-//}
-
 void Renderer::createGraphicsPipeline() {
     //###################################################
     // Shader modules:
-//    std::vector<char> vertShaderCode = readFile();
-//    std::vector<char> fragShaderCode = readFile();
 
-    VkShaderModule vertShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/vert.spv", device);
-    VkShaderModule fragShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/frag.spv", device);
-//    VkShaderModule vertShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/shader.vert", device);
-//    VkShaderModule fragShaderModule = Shader_Manager::createShaderModule("F:/Git Repo/asterism/shaders/shader.frag", device);
+    ShaderManager shaderManager;
+    std::string vertexShaderPath = std::string(SOURCE_DIR).append("/shaders/shader.vert");
+    std::string fragmentShaderPath = std::string(SOURCE_DIR).append("/shaders/shader.frag");
+
+    VkShaderModule vertShaderModule = shaderManager.createShaderModule(vertexShaderPath, device);
+    VkShaderModule fragShaderModule = shaderManager.createShaderModule(fragmentShaderPath, device);
 
     VkPipelineShaderStageCreateInfo vertShaderStageCreateInfo = {};
     vertShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

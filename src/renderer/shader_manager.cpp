@@ -1,44 +1,127 @@
 #include "renderer/shader_manager.h"
 
-std::vector<char> Shader_Manager::readShaderFile(const std::string &filename) {
-    // ate flag: start reading at the end of the file
-    // binary flag: read t as binary (avoid text transformations)
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file " + filename);
+
+VkShaderModule ShaderManager::createShaderModule(const std::string &filePath, VkDevice device) {
+
+    // TODO: Best put this into a constructor for shaderManager
+    if (!glslangInitialized) {
+        glslang::InitializeProcess();
+        glslangInitialized = true;
     }
-    // The advantage from reading at the end is that we can use the read position to determine file size
-    // and allocate a buffer
-    size_t fileSize = (size_t) file.tellg();
-    std::vector<char> buffer(fileSize);
 
-    // Then go back at the beginning of the file and read all of the bytes
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
+    // Load glsl source into a string:
+    std::string shaderString = readShaderFile((filePath));
+    const char *shaderSource = shaderString.c_str();
 
-    file.close();
-    return buffer;
+//    std::cout << "######################## SHADER SOURCE ########################" << std::endl;
+//    std::cout << shaderSource << std::endl;
 
-}
+    // Retrieve shader type
+    EShLanguage shaderType = getShaderStage(getSuffix(filePath));
 
-VkShaderModule Shader_Manager::createShaderModule(const std::string &filename, VkDevice device) {
+    // Create glslang shader with that type
+    glslang::TShader shader(shaderType);
+    shader.setStrings(&shaderSource, 1);
 
-    std::vector<char> shaderSourceChar = readShaderFile(filename);
-    std::string shaderSource(shaderSourceChar.begin(), shaderSourceChar.end());
-    //std::cout << shaderSource << std::endl;
+    // Define compilation language, client and target
+    int clientInputSemanticsVersion = 110; // maps to #define VULKAN 110
+    glslang::EShClient client = glslang::EShClientVulkan;
+    glslang::EShTargetClientVersion clientVersion = glslang::EShTargetVulkan_1_1;
+    glslang::EShTargetLanguage target = glslang::EShTargetSpv;
+    glslang::EShTargetLanguageVersion targetVersion = glslang::EShTargetSpv_1_0;
+    shader.setEnvInput(glslang::EShSourceGlsl, shaderType, client, clientInputSemanticsVersion);
+    shader.setEnvClient(client, clientVersion);
+    shader.setEnvTarget(target, targetVersion);
+    const int defaultVersion = 100;
 
-    // ToDo: Check: use glslLangValidator or shaderc / glslang, see THIS: https://forestsharp.com/glslang-cpp/
+    TBuiltInResource resources = DefaultTBuiltInResource;
+    auto messages = (EShMessages) (EShMsgSpvRules | EShMsgVulkanRules);
 
-    std::vector<char> code = readShaderFile(filename);
+
+    //####################################
+    // Preprocess:
+    DirStackFileIncluder fileIncluder;
+    fileIncluder.pushExternalLocalDirectory(filePath);
+
+    std::string preprocessedGLSL;
+
+    if (!shader.preprocess(&resources, defaultVersion, ENoProfile, false, false, messages, &preprocessedGLSL, fileIncluder)) {
+        std::cout << "GLSL Preprocessing Failed for: " << filePath << std::endl;
+        std::cout << shader.getInfoLog() << std::endl;
+        std::cout << shader.getInfoDebugLog() << std::endl;
+    }
+    // Store the preprocessed string into the shader and overwrite the previous one
+    const char *preprocessedCStr = preprocessedGLSL.c_str();
+    shader.setStrings(&preprocessedCStr, 1);
+
+    //####################################
+    // Compile:
+    // First, parse the shader
+    if (!shader.parse(&resources, defaultVersion, false, messages)) {
+        std::cout << "GLSL Parsing Failed for: " << filePath << std::endl;
+        std::cout << shader.getInfoLog() << std::endl;
+        std::cout << shader.getInfoDebugLog() << std::endl;
+    }
+
+    // Then, add the parsed shader to a glslang::TProgram and link the program:
+    glslang::TProgram program;
+    program.addShader(&shader);
+
+    if (!program.link(messages)) {
+        std::cout << "GLSL Linking Failed for: " << filePath << std::endl;
+        std::cout << shader.getInfoLog() << std::endl;
+        std::cout << shader.getInfoDebugLog() << std::endl;
+    }
+    // If no errors occurred: return the SpirV:
+    std::vector<unsigned int> shaderSPIR_V;
+    spv::SpvBuildLogger logger;
+    glslang::SpvOptions spvOptions;
+    glslang::GlslangToSpv(*program.getIntermediate(shaderType), shaderSPIR_V, &logger, &spvOptions);
+
 
     // need to wrap the code in a VkShaderModule before passing it to the pipeline.
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
     shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shaderModuleCreateInfo.codeSize = code.size();
-    shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
+    shaderModuleCreateInfo.codeSize = shaderSPIR_V.size() * sizeof(unsigned int);
+    shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t *>(shaderSPIR_V.data());
 
     VkShaderModule shaderModule = {};
     VK_CHECK(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule));
 
     return shaderModule;
+}
+
+std::string ShaderManager::readShaderFile(const std::string &filename) {
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cout << "Failed to load shader: " << filename << std::endl;
+        throw std::runtime_error("failed to open file: " + filename);
+    }
+
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+
+std::string ShaderManager::getSuffix(const std::string &name) {
+    const size_t pos = name.rfind('.');
+    return (pos == std::string::npos) ? "" : name.substr(name.rfind('.') + 1);
+}
+
+EShLanguage ShaderManager::getShaderStage(const std::string &stage) {
+    if (stage == "vert") {
+        return EShLangVertex;
+    } else if (stage == "tesc") {
+        return EShLangTessControl;
+    } else if (stage == "tese") {
+        return EShLangTessEvaluation;
+    } else if (stage == "geom") {
+        return EShLangGeometry;
+    } else if (stage == "frag") {
+        return EShLangFragment;
+    } else if (stage == "comp") {
+        return EShLangCompute;
+    } else {
+        assert(0 && "Unknown shader stage");
+        return EShLangCount;
+    }
 }
