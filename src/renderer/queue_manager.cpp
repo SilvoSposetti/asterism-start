@@ -20,22 +20,22 @@ void QueueManager::retrieveAvailableQueueIndices(VkPhysicalDevice physicalDevice
 
     // Find all required queues:
     std::vector<uint32_t> indicesFound(numOfQueues, invalidQueueIndex);
-    for (uint32_t i = 0; i < numOfQueues; i++) {
+    for (unsigned long long i = 0; i < numOfQueues; i++) {
         if (queueFlags[i] == GRAPHICS_QUEUE) {
-            for (int j = 0; j < queueFamilyCount; ++j) {
+            for (unsigned long long j = 0; j < queueFamilyCount; ++j) {
                 if (queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                     indicesFound[i] = j;
                 }
             }
         } else if (queueFlags[i] == COMPUTE_QUEUE) {
-            for (int j = 0; j < queueFamilyCount; ++j) {
+            for (unsigned long long j = 0; j < queueFamilyCount; ++j) {
                 if (queueFamilies[j].queueFlags & VK_QUEUE_COMPUTE_BIT) {
                     indicesFound[i] = j;
                 }
             }
         } else if (queueFlags[i] == PRESENT_QUEUE) {
             VkBool32 presentSupport = false;
-            for (int j = 0; j < queueFamilyCount; ++j) {
+            for (unsigned long long j = 0; j < queueFamilyCount; ++j) {
                 vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, j, surface, &presentSupport);
                 if (presentSupport) {
                     indicesFound[i] = j;
@@ -45,7 +45,7 @@ void QueueManager::retrieveAvailableQueueIndices(VkPhysicalDevice physicalDevice
         }
     }
 
-    for (uint32_t i = 0; i < numOfQueues; ++i) {
+    for (unsigned long long i = 0; i < numOfQueues; ++i) {
         if (indicesFound[i] == invalidQueueIndex) {
             throw std::runtime_error("GPU doesn't support some necessary queues!");
         }
@@ -56,7 +56,7 @@ void QueueManager::retrieveAvailableQueueIndices(VkPhysicalDevice physicalDevice
 
 // Setters:
 void QueueManager::setQueues(VkDevice device) {
-    for (uint32_t i = 0; i < numOfQueues; ++i) {
+    for (unsigned long long i = 0; i < numOfQueues; ++i) {
         VkQueue queue = VK_NULL_HANDLE;
         vkGetDeviceQueue(device, families[i], 0, &queue);
         vkQueues[i] = queue;
@@ -77,7 +77,7 @@ VkQueue *QueueManager::getQueue(QueueType flag) {
 
 
 uint32_t QueueManager::getFlagIndex(QueueType flag) {
-    for (uint32_t i = 0; i < queueFlags.size(); ++i) {
+    for (unsigned long long i = 0; i < queueFlags.size(); ++i) {
         if (queueFlags[i] == flag) {
             return i;
         }

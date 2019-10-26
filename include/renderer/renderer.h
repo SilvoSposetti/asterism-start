@@ -10,6 +10,7 @@
 #include <set>
 #include <array>
 #include <chrono>
+#include <memory>
 #include <glm/gtc/matrix_transform.hpp>
 
 #define GLM_FORCE_RADIANS
@@ -21,6 +22,8 @@
 #include "shader_manager.h"
 #include "swapchain_support_details.h"
 #include "renderer_utility.h"
+#include "input_manager.h"
+
 
 class Renderer {
 public:
@@ -47,6 +50,9 @@ private:
     };
 
     GLFWwindow *window = nullptr;
+
+    // Input Control
+    std::shared_ptr<InputControl> inputControl;
 
     // Vulkan Core
     VkInstance instance = nullptr;

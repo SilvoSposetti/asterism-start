@@ -25,10 +25,9 @@ void print(std::string message) {
 void log(std::string message) {
     int lineLength = 60;
 
-    // Convert message to std::string
     int messageLength = message.length();
-
     int linesNeeded = (int) messageLength / lineLength + 1;
+
     for (int i = 0; i < linesNeeded; i++) {
         std::string paddedText;
         if (i == (linesNeeded - 1)) {
@@ -42,6 +41,7 @@ void log(std::string message) {
 }
 
 void log(const char *message) {
+    // Convert message to std::string
     std::string text = std::string(message);
     log(std::string(text));
 }

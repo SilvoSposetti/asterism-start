@@ -11,7 +11,25 @@ void Renderer::initializeWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Tell GLFW not to create an OpenGL context.
     // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // Block window resize
+
+
+
+    // Create windowed window on startup
     window = glfwCreateWindow(WIDTH, HEIGHT, asterismName.c_str(), nullptr, nullptr);
+
+
+    // This will hide the cursor and lock it to the specified window. GLFW will then take care of all the details of cursor re-centering and offset calculation and providing the application with a virtual cursor position.
+//    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    // Set input control callbacks:
+    inputControl = std::make_shared<InputControl>();
+    inputControl->setEventHandling(); // inputControl class stores state but GLFW callback functions require a static function, so must set this instance in the class for proper event handling.
+    // Define which static functions GLFW needs to call when input events happen:
+    glfwSetKeyCallback(window, InputControl::keyCallbackDispatcher);
+    glfwSetCursorPosCallback(window, InputControl::mousePositionCallbackDispatcher);
+    glfwSetMouseButtonCallback(window, InputControl::mouseButtonCallbackDispatcher);
+    glfwSetScrollCallback(window, InputControl::mouseScrollCallbackDispatcher);
+
 
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
@@ -74,12 +92,8 @@ VkExtent2D Renderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabiliti
         glfwGetFramebufferSize(window, &width, &height);
         VkExtent2D actualExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 
-        actualExtent.width =
-                std::max(capabilities.minImageExtent.width,
-                         std::min(capabilities.maxImageExtent.width, actualExtent.width));
-        actualExtent.height =
-                std::max(capabilities.minImageExtent.height,
-                         std::min(capabilities.maxImageExtent.height, actualExtent.height));
+        actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+        actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
         return actualExtent;
     }
@@ -1043,7 +1057,7 @@ void Renderer::drawFrame() {
         recreateSwapchain();
         return;
     } else if (acquireNextImageResult != VK_SUCCESS && acquireNextImageResult != VK_SUBOPTIMAL_KHR) {
-        throw std::runtime_error("failed to acquire swapchjain image");
+        throw std::runtime_error("failed to acquire swapchain image");
     }
 
     //###################################################
@@ -1089,7 +1103,7 @@ void Renderer::drawFrame() {
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
-    // Can additionally specify an array of VkResult values to check if every swapchain presentation was succesfull
+    // Can additionally specify an array of VkResult values to check if every swapchain presentation was successful
     // which is not really necessary for a single swapchain, since the return value of the present function can be used
     presentInfo.pResults = nullptr; // Optional
 
