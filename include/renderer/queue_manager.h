@@ -4,6 +4,7 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include "renderer_utility.h"
 
 enum QueueType {
     GRAPHICS_QUEUE,

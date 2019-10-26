@@ -1,18 +1,13 @@
 #include "renderer/vulkan_core.h"
 
-VkInstance VulkanCore::createInstance(const char *asterismName, bool isDebug) {
-    std::cout << "*** Running " << asterismName << " in ";
-    if (isDebug) {
-        std::cout << "DEBUG";
-    } else {
-        std::cout << "RELEASE";
-    }
-    std::cout << " mode ***" << std::endl;
+VkInstance VulkanCore::createInstance(std::string asterismName, bool isDebug) {
+    std::string mode = isDebug ? "DEBUG" : "RELEASE";
+    logTitle("Running " + std::string(asterismName) + " in " + mode + " mode");
 
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    applicationInfo.pApplicationName = asterismName;
+    applicationInfo.pApplicationName = asterismName.c_str();
     applicationInfo.apiVersion = VK_VERSION_1_1;
 
     VkInstanceCreateInfo instanceCreateInfo = {};
@@ -27,7 +22,7 @@ VkInstance VulkanCore::createInstance(const char *asterismName, bool isDebug) {
         };
         instanceCreateInfo.ppEnabledLayerNames = debugLayers;
         instanceCreateInfo.enabledLayerCount = sizeof(debugLayers) / sizeof(debugLayers[0]);
-        std::cout << ("Validation Layers ENABLED") << std::endl;
+        log("Validation Layers ENABLED");
     }
 
     uint32_t glfwExtensionCount = 0;
@@ -38,7 +33,7 @@ VkInstance VulkanCore::createInstance(const char *asterismName, bool isDebug) {
     instanceCreateInfo.enabledExtensionCount = glfwExtensionCount;
 
     VkInstance instance;
-    VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &instance));
+    VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &instance), "Instance Creation");
 
     return instance;
 }
@@ -47,7 +42,7 @@ VkInstance VulkanCore::createInstance(const char *asterismName, bool isDebug) {
 VkSurfaceKHR VulkanCore::createSurface(VkInstance instance, GLFWwindow *window) {
     VkSurfaceKHR surface = nullptr;
     // GLFW should handle all platform specific code to generate a surface
-    VK_CHECK(glfwCreateWindowSurface(instance, window, nullptr, &surface));
+    VK_CHECK(glfwCreateWindowSurface(instance, window, nullptr, &surface), "GLFW Window Surface Creation");
     return surface;
 }
 
@@ -97,7 +92,7 @@ bool VulkanCore::isDiscreteGPU(VkPhysicalDevice device) {
     vkGetPhysicalDeviceProperties(device, &properties);
 
     if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-        printf("Using discrete GPU: %s\n", properties.deviceName);
+        log(std::string("Using discrete GPU: ") + properties.deviceName);
         return true;
     }
     return false;
@@ -108,7 +103,7 @@ bool VulkanCore::isIntegratedGPU(VkPhysicalDevice device) {
     vkGetPhysicalDeviceProperties(device, &properties);
 
     if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-        printf("Using integrated GPU: %s\n", properties.deviceName);
+        log(std::string("Using integrated GPU: ") + properties.deviceName);
         return true;
     }
     return false;
@@ -142,7 +137,7 @@ VkDevice VulkanCore::createLogicalDevice(VkPhysicalDevice physicalDevice,
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     VkDevice device;
-    VK_CHECK(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device), "Failed to create device");
+    VK_CHECK(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device), "Logical Device Creation");
 
     return device;
 }

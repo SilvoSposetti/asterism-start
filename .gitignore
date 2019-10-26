@@ -1,9 +1,6 @@
 # ignore all binaries of the application
 bin/
 
-# ignore all intermediately compiled shader code
-*.spv
-
 # ignore editor files
 \.idea/
 

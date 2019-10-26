@@ -87,17 +87,20 @@ uint32_t QueueManager::getFlagIndex(QueueType flag) {
 
 // Other:
 void QueueManager::printQueueInfo() {
-    std::cout << "Queue family indices: " << std::endl;
-    for (uint32_t i = 0; i < numOfQueues; ++i) {
-        std::cout << "\t";
+    log("Queue family indices:");
+    std::string queuesString;
+    for (size_t i = 0; i < numOfQueues; ++i) {
         if (queueFlags[i] == GRAPHICS_QUEUE) {
-            std::cout << "Graphics";
+            queuesString.append("Graphics:");
         } else if (queueFlags[i] == COMPUTE_QUEUE) {
-            std::cout << "Compute";
+            queuesString.append("Compute:");
         } else if (queueFlags[i] == PRESENT_QUEUE) {
-            std::cout << "Present";
+            queuesString.append("Present:");
         }
-        std::cout << " - " << families[i];
+        queuesString.append(" - " + std::to_string(families[i]));
+        if(i != numOfQueues -1){
+            queuesString.append("     ");
+        }
     }
-    std::cout << std::endl;
+    log(queuesString);
 }

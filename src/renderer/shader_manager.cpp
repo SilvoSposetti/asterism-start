@@ -13,8 +13,9 @@ VkShaderModule ShaderManager::createShaderModule(const std::string &filePath, Vk
     std::string shaderString = readShaderFile((filePath));
     const char *shaderSource = shaderString.c_str();
 
-//    std::cout << "######################## SHADER SOURCE ########################" << std::endl;
-//    std::cout << shaderSource << std::endl;
+    // Print shader status:
+//    log("Loading Shader " + filePath);
+//    print(shaderSource);
 
     // Retrieve shader type
     EShLanguage shaderType = getShaderStage(getSuffix(filePath));
@@ -46,9 +47,9 @@ VkShaderModule ShaderManager::createShaderModule(const std::string &filePath, Vk
     std::string preprocessedGLSL;
 
     if (!shader.preprocess(&resources, defaultVersion, ENoProfile, false, false, messages, &preprocessedGLSL, fileIncluder)) {
-        std::cout << "GLSL Preprocessing Failed for: " << filePath << std::endl;
-        std::cout << shader.getInfoLog() << std::endl;
-        std::cout << shader.getInfoDebugLog() << std::endl;
+        log("GLSL Preprocessing Failed for: " + filePath);
+        print(shader.getInfoLog());
+        print(shader.getInfoDebugLog());
     }
     // Store the preprocessed string into the shader and overwrite the previous one
     const char *preprocessedCStr = preprocessedGLSL.c_str();
@@ -58,9 +59,9 @@ VkShaderModule ShaderManager::createShaderModule(const std::string &filePath, Vk
     // Compile:
     // First, parse the shader
     if (!shader.parse(&resources, defaultVersion, false, messages)) {
-        std::cout << "GLSL Parsing Failed for: " << filePath << std::endl;
-        std::cout << shader.getInfoLog() << std::endl;
-        std::cout << shader.getInfoDebugLog() << std::endl;
+        log("GLSL Parsing Failed for: " + filePath);
+        print(shader.getInfoLog());
+        print(shader.getInfoDebugLog());
     }
 
     // Then, add the parsed shader to a glslang::TProgram and link the program:
@@ -68,9 +69,9 @@ VkShaderModule ShaderManager::createShaderModule(const std::string &filePath, Vk
     program.addShader(&shader);
 
     if (!program.link(messages)) {
-        std::cout << "GLSL Linking Failed for: " << filePath << std::endl;
-        std::cout << shader.getInfoLog() << std::endl;
-        std::cout << shader.getInfoDebugLog() << std::endl;
+        log("GLSL Linking Failed for: " + filePath);
+        print(shader.getInfoLog());
+        print(shader.getInfoDebugLog());
     }
     // If no errors occurred: return the SpirV:
     std::vector<unsigned int> shaderSPIR_V;
@@ -86,7 +87,9 @@ VkShaderModule ShaderManager::createShaderModule(const std::string &filePath, Vk
     shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t *>(shaderSPIR_V.data());
 
     VkShaderModule shaderModule = {};
-    VK_CHECK(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule));
+    VK_CHECK(vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule), "Shader Module Creation");
+
+    log("Shader Loaded: " + filePath);
 
     return shaderModule;
 }
@@ -95,7 +98,7 @@ std::string ShaderManager::readShaderFile(const std::string &filename) {
     std::ifstream file(filename);
 
     if (!file.is_open()) {
-        std::cout << "Failed to load shader: " << filename << std::endl;
+        log("Failed to load shader: " + filename);
         throw std::runtime_error("failed to open file: " + filename);
     }
 
@@ -121,7 +124,7 @@ EShLanguage ShaderManager::getShaderStage(const std::string &stage) {
     } else if (stage == "comp") {
         return EShLangCompute;
     } else {
-        assert(0 && "Unknown shader stage");
-        return EShLangCount;
+        log("Unknown shader stage");
+        throw std::runtime_error("Unknown shader stage");
     }
 }

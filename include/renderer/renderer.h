@@ -29,7 +29,7 @@ public:
 
 private:
 
-    const char *asterismName = "asterism";
+    std::string asterismName = "asterism";
     const uint32_t WIDTH = 1024;
     const uint32_t HEIGHT = 768;
 

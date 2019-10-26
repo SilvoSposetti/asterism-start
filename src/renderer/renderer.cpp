@@ -11,8 +11,7 @@ void Renderer::initializeWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Tell GLFW not to create an OpenGL context.
     // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // Block window resize
-
-    window = glfwCreateWindow(WIDTH, HEIGHT, asterismName, nullptr, nullptr);
+    window = glfwCreateWindow(WIDTH, HEIGHT, asterismName.c_str(), nullptr, nullptr);
 
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, frameBufferResizeCallback);
@@ -23,9 +22,9 @@ void Renderer::frameBufferResizeCallback(GLFWwindow *window, int width, int heig
     app->frameBufferResized = true;
 
     if (width == 0 or height == 0) {
-        std::cout << "Window has been minimized" << std::endl;
+        logTitle("Window has been minimized");
     } else {
-        std::cout << "Window has been resized (" << width << "x" << height << ")" << std::endl;
+        logTitle("Window has been resized (" + std::to_string(width) + "x" + std::to_string(height) + ")");
     }
 }
 
@@ -101,7 +100,7 @@ void Renderer::createSwapchain() {
     }
 
     if (requiredExtensions.empty()) {
-        std::cout << "Swapchain is supported";
+//        log("Swapchain is supported");
     } else {
         throw std::runtime_error("Swapchain not supported");
     }
@@ -111,8 +110,7 @@ void Renderer::createSwapchain() {
     SwapchainSupportDetails swapChainSupport = SwapchainSupportDetails::querySwapchainSupport(physicalDevice, surface);
     swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     if (swapChainAdequate) {
-        std::cout << ", and itself it supports surface formats and presentation modes"
-                  << std::endl;
+//        log("Swapchain supports surface formats and presentation modes");
     } else {
         throw std::runtime_error("Swapchain doesn't support surface formats or presentation modes");
     }
@@ -164,8 +162,8 @@ void Renderer::createSwapchain() {
     // If a new swapchain is created store a reference to the old one here
     swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    VK_CHECK(vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain));
-    std::cout << "Amount of swapchain images: " << imageCount << std::endl;
+    VK_CHECK(vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain), "Swapchain Creation");
+    log("Amount of swapchain images: " + std::to_string(imageCount));
 
     // Retrieve swapchain images handles:
     vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
@@ -201,7 +199,7 @@ void Renderer::createImageViews() {
         imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
         imageViewCreateInfo.subresourceRange.layerCount = 1;
 
-        VK_CHECK(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapchainImageViews[i]));
+        VK_CHECK(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapchainImageViews[i]), "Image View Creation");
 
     }
 
@@ -274,7 +272,7 @@ void Renderer::createRenderPass() {
     renderPassCreateInfo.dependencyCount = 1;
     renderPassCreateInfo.pDependencies = &subpassDependency;
 
-    VK_CHECK(vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass));
+    VK_CHECK(vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &renderPass), "Render Pass Creation");
 
 
 }
@@ -299,7 +297,7 @@ void Renderer::createDescriptorSetLayout() {
     setLayoutCreateInfo.bindingCount = 1;
     setLayoutCreateInfo.pBindings = &uboLayoutBinding;
 
-    VK_CHECK(vkCreateDescriptorSetLayout(device, &setLayoutCreateInfo, nullptr, &descriptorSetLayout));
+    VK_CHECK(vkCreateDescriptorSetLayout(device, &setLayoutCreateInfo, nullptr, &descriptorSetLayout), "Descriptor Set Layout Creation");
 }
 
 void Renderer::createGraphicsPipeline() {
@@ -488,7 +486,7 @@ void Renderer::createGraphicsPipeline() {
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-    VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout));
+    VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout), "Pipeline Layout Creation");
 
     //###################################################
     // Pipeline:
@@ -517,7 +515,7 @@ void Renderer::createGraphicsPipeline() {
 
     // vkCreateGraphicsPipelines is actually designed to handle multiple pipelineCreateInfos and
     // consequently it can create multiple pipelines
-    VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &graphicsPipeline));
+    VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &graphicsPipeline), "Graphics Pipeline Creation");
 
     // Shader modules can be destroyed as soon as the pipeline is created
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
@@ -540,7 +538,7 @@ void Renderer::createFramebuffers() {
         framebufferCreateInfo.height = swapchainExtent.height;
         framebufferCreateInfo.layers = 1;
 
-        VK_CHECK(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &swapchainFrameBuffers[i]));
+        VK_CHECK(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &swapchainFrameBuffers[i]), "Frame Buffer Creation");
     }
 }
 
@@ -553,7 +551,7 @@ void Renderer::createCommandPool() {
     // VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: Allow command buffers to be rerecorded individually, without this flag they all have to be reset together
     commandPoolCreateInfo.flags = 0; // Optional (none of the above are used)
 
-    VK_CHECK(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool));
+    VK_CHECK(vkCreateCommandPool(device, &commandPoolCreateInfo, nullptr, &commandPool), "Command Pool Creation");
 }
 
 
@@ -588,7 +586,7 @@ void Renderer::createBuffer(VkDeviceSize size,
     bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     // Create vertex buffer:
-    VK_CHECK(vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer));
+    VK_CHECK(vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer), "Buffer Creation");
 
     // Memory Requirements and Allocation:
     VkMemoryRequirements memRequirements;
@@ -601,7 +599,7 @@ void Renderer::createBuffer(VkDeviceSize size,
     // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ensures that memory used by CPU and GPU is coherent
     memoryAllocateInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    VK_CHECK(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &bufferMemory));
+    VK_CHECK(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &bufferMemory), "Memory Allocation");
 
     // If allocation is successful, then the memory can be associated with the buffer.
     // The fourth parameter is the offset within the region of memory. If the offset is non-zero, then it is
@@ -750,7 +748,7 @@ void Renderer::createDescriptorPool() {
     // 'maxSets' specifies the maximum amount of descriptor sets that may be allocated
     descriptorPoolCreateInfo.maxSets = static_cast<uint32_t>(swapchainImages.size());
 
-    VK_CHECK(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
+    VK_CHECK(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool), "Descriptor Pool Creation");
 }
 
 void Renderer::createDescriptorSets() {
@@ -764,7 +762,7 @@ void Renderer::createDescriptorSets() {
 
     // Allocate descriptor sets:
     descriptorSets.resize(swapchainImages.size());
-    VK_CHECK(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets.data()));
+    VK_CHECK(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, descriptorSets.data()), "Descriptor Sets Allocation");
 
     // The set has been allocated, but the descriptors within it still need to be configured:
     for (size_t i = 0; i < swapchainImages.size(); i++) {
@@ -810,7 +808,7 @@ void Renderer::createCommandBuffers() {
     commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferAllocateInfo.commandBufferCount = (uint32_t) commandBuffers.size();
 
-    VK_CHECK(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffers.data()));
+    VK_CHECK(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, commandBuffers.data()), "Command Buffer Allocation");
 
     for (size_t i = 0; i < commandBuffers.size(); i++) {
         // Starting command buffer recording:
@@ -823,7 +821,7 @@ void Renderer::createCommandBuffers() {
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
         beginInfo.pInheritanceInfo = nullptr; // Optional
 
-        VK_CHECK(vkBeginCommandBuffer(commandBuffers[i], &beginInfo));
+        VK_CHECK(vkBeginCommandBuffer(commandBuffers[i], &beginInfo), "Command Buffer Begin");
 
         // Starting a render pass:
         VkRenderPassBeginInfo renderPassInfo = {};
@@ -875,7 +873,7 @@ void Renderer::createCommandBuffers() {
         vkCmdEndRenderPass(commandBuffers[i]);
 
         // Finished recording the command buffer:
-        VK_CHECK(vkEndCommandBuffer(commandBuffers[i]));
+        VK_CHECK(vkEndCommandBuffer(commandBuffers[i]), "Command Buffer End");
     }
 }
 
@@ -898,9 +896,9 @@ void Renderer::createSyncObjects() {
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]));
-        VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]));
-        VK_CHECK(vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]));
+        VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]), "Semaphore Creation");
+        VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]), "Semaphore Creation");
+        VK_CHECK(vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]), "Fence Creation");
     }
 }
 
@@ -1077,7 +1075,7 @@ void Renderer::drawFrame() {
 
     vkResetFences(device, 1, &inFlightFences[currentFrame]);
 
-    VK_CHECK(vkQueueSubmit(*queues.getQueue(GRAPHICS_QUEUE), 1, &submitInfo, inFlightFences[currentFrame]));
+    VK_CHECK(vkQueueSubmit(*queues.getQueue(GRAPHICS_QUEUE), 1, &submitInfo, inFlightFences[currentFrame]), "Queue Submission");
 
     //###################################################
     // 4. Return the image to the swapchain for presentation

@@ -11,7 +11,7 @@
 class VulkanCore {
 public:
 
-    static VkInstance createInstance(const char *asterismName, bool isDebug);
+    static VkInstance createInstance(std::string asterismName, bool isDebug);
 
     static VkSurfaceKHR createSurface(VkInstance instance, GLFWwindow *window);
 
