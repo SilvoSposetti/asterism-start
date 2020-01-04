@@ -21,14 +21,14 @@ void Renderer::initializeWindow() {
     // This will hide the cursor and lock it to the specified window. GLFW will then take care of all the details of cursor re-centering and offset calculation and providing the application with a virtual cursor position.
 //    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // Set input control callbacks:
-    inputControl = std::make_shared<InputControl>();
-    inputControl->setEventHandling(); // inputControl class stores state but GLFW callback functions require a static function, so must set this instance in the class for proper event handling.
+    // Set input manager callbacks:
+    inputManager = std::make_shared<InputManager>();
+    inputManager->setEventHandling(); // inputManager class stores state but GLFW callback functions require a static function, so must set this instance in the class for proper event handling.
     // Define which static functions GLFW needs to call when input events happen:
-    glfwSetKeyCallback(window, InputControl::keyCallbackDispatcher);
-    glfwSetCursorPosCallback(window, InputControl::mousePositionCallbackDispatcher);
-    glfwSetMouseButtonCallback(window, InputControl::mouseButtonCallbackDispatcher);
-    glfwSetScrollCallback(window, InputControl::mouseScrollCallbackDispatcher);
+    glfwSetKeyCallback(window, InputManager::keyCallbackDispatcher);
+    glfwSetCursorPosCallback(window, InputManager::mousePositionCallbackDispatcher);
+    glfwSetMouseButtonCallback(window, InputManager::mouseButtonCallbackDispatcher);
+    glfwSetScrollCallback(window, InputManager::mouseScrollCallbackDispatcher);
 
 
     glfwSetWindowUserPointer(window, this);

@@ -1,9 +1,9 @@
 #include "renderer/input_manager.h"
 
 // Global scope type qualifier
-InputControl *InputControl::eventHandlingInstance;
+InputManager *InputManager::eventHandlingInstance;
 
-void InputControl::keyCallback(GLFWwindow *window, int key, int scanCode, int action, int mods) {
+void InputManager::keyCallback(GLFWwindow *window, int key, int scanCode, int action, int mods) {
     if (key == GLFW_KEY_E && action == GLFW_PRESS) {
 //        print("Pressed E");
     } else if (key == GLFW_KEY_E && action == GLFW_RELEASE) {
@@ -25,7 +25,7 @@ void InputControl::keyCallback(GLFWwindow *window, int key, int scanCode, int ac
     }
 }
 
-void InputControl::toggleFullscreen(GLFWwindow *window) {
+void InputManager::toggleFullscreen(GLFWwindow *window) {
     this->isFullScreen = !isFullScreen;
 
     if (isFullScreen) {
@@ -41,14 +41,14 @@ void InputControl::toggleFullscreen(GLFWwindow *window) {
     }
 }
 
-void InputControl::mousePositionCallback(GLFWwindow *window, double _posX, double _posY) {
+void InputManager::mousePositionCallback(GLFWwindow *window, double _posX, double _posY) {
 //    std::cout << "Mouse pos: " << posX << " - " << posY << std::endl;
     this->posX = _posX;
     this->posY = _posY;
 
 }
 
-void InputControl::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+void InputManager::mouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
 
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
@@ -77,7 +77,7 @@ void InputControl::mouseButtonCallback(GLFWwindow *window, int button, int actio
     }
 }
 
-void InputControl::mouseScrollCallback(GLFWwindow *window, double _offsetX, double _offsetY) {
+void InputManager::mouseScrollCallback(GLFWwindow *window, double _offsetX, double _offsetY) {
 //    std::cout << "Mouse scroll: " << offsetX << " - " << offsetY << std::endl;
     this->offsetX = _offsetX;
     this->offsetY = _offsetY;

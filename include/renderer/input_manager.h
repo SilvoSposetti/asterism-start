@@ -6,14 +6,14 @@
 
 #include "renderer_utility.h"
 
-class InputControl {
+class InputManager {
 public:
 
     // The class stores state about the input events.
     // Need to store a reference to itself, such that the static dispatcher functions can call the correct callbacks.
     // The callbacks operate using the state of the eventHandlingInstance, which must be set before the callbacks are hooked.
     // See more about this here: https://stackoverflow.com/questions/21799746/how-to-glfwsetkeycallback-for-different-classes
-    static InputControl *eventHandlingInstance;
+    static InputManager *eventHandlingInstance;
 
     void setEventHandling() { eventHandlingInstance = this; }
 
@@ -40,18 +40,6 @@ public:
 
 
 private:
-    // Member functions that are called from the dispatchers with the proper InputControl handling instance
-    void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
-
-    void mousePositionCallback(GLFWwindow *window, double posX, double posY);
-
-    void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
-
-    void mouseScrollCallback(GLFWwindow *window, double offsetX, double offsetY);
-
-    int counter = 0;
-    std::vector<double> mousePosition;
-
     // Fullscreen functionality
     bool isFullScreen = false;
     int lastWindowedPosY;
@@ -73,5 +61,15 @@ private:
     // Mouse scroll
     double offsetX;
     double offsetY;
+
+    // Member functions that are called from the dispatchers with the proper InputManager handling instance
+    void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
+
+    void mousePositionCallback(GLFWwindow *window, double posX, double posY);
+
+    void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
+
+    void mouseScrollCallback(GLFWwindow *window, double offsetX, double offsetY);
+
 
 };

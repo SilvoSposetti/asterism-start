@@ -11,7 +11,7 @@ void VK_CHECK(VkResult result, const char *message);
 
 void print(const char *message);
 
-void print(const std::string *message);
+void print(std::string message);
 
 
 void log(const char *message);

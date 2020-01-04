@@ -51,8 +51,8 @@ private:
 
     GLFWwindow *window = nullptr;
 
-    // Input Control
-    std::shared_ptr<InputControl> inputControl;
+    // Input Manager
+    std::shared_ptr<InputManager> inputManager;
 
     // Vulkan Core
     VkInstance instance = nullptr;
