@@ -12,8 +12,6 @@ void Renderer::initializeWindow() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Tell GLFW not to create an OpenGL context.
     // glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // Block window resize
 
-
-
     // Create windowed window on startup
     window = glfwCreateWindow(WIDTH, HEIGHT, asterismName.c_str(), nullptr, nullptr);
 
@@ -160,8 +158,8 @@ void Renderer::createSwapchain() {
         uint32_t queueFamilyIndices[] = {queues.getFamilyIndex(GRAPHICS_QUEUE), queues.getFamilyIndex(PRESENT_QUEUE)};
         swapchainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
     } else {
-        //VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and ownership must be explicitly transferred before using it in another queue family.
-        //This option offers the best performance
+        // VK_SHARING_MODE_EXCLUSIVE: An image is owned by one queue family at a time and ownership must be explicitly transferred before using it in another queue family.
+        // This option offers the best performance
         swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         swapchainCreateInfo.queueFamilyIndexCount = 0; // Optional
         swapchainCreateInfo.pQueueFamilyIndices = nullptr; // Optional
@@ -226,7 +224,7 @@ void Renderer::createRenderPass() {
     VkAttachmentDescription attachmentDescription = {};
     // Format should match that of the swapchain
     attachmentDescription.format = swapchainImageFormat;
-    // Increase if multisampling is needed
+    // Increase if multi-sampling is needed
     attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
     // loadOp: what to do before rendering
     // VK_ATTACHMENT_LOAD_OP_CLEAR clears the values to a constant at the start
@@ -370,7 +368,7 @@ void Renderer::createGraphicsPipeline() {
     // Input assembly:
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {};
     inputAssemblyStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    // Set whet kind of do the vertices represent
+    // Set what kind of geometry do the vertices represent
     inputAssemblyStateCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     // It's possible to break up lines and triangles having the '_STRIP' topology if this is set to true
     inputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
@@ -920,7 +918,7 @@ void Renderer::initializeVulkan() {
     // Vulkan core:
     instance = VulkanCore::createInstance(asterismName, isDebug);
     surface = VulkanCore::createSurface(instance, window);
-    physicalDevice = VulkanCore::createPhysicalDevice(instance, surface);
+    physicalDevice = VulkanCore::createPhysicalDevice(instance);
 
     queues.retrieveAvailableQueueIndices(physicalDevice, surface);
 

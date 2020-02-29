@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
 
+####################
+# Project properties:
 set(PROJECT_NAME asterism)
-project(${PROJECT_NAME} CXX)
+project(${PROJECT_NAME} VERSION 0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,8 +17,8 @@ file(GLOB_RECURSE SOURCE_FILES
         src/*.cpp)
 
 set(PROJECT_INCLUDE_DIR include)
-include_directories(${PROJECT_INCLUDE_DIR})
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_INCLUDE_DIR})
 
 
 ####################
@@ -26,7 +28,7 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 # Path:
 set(GLM_DIR ${PROJECT_SOURCE_DIR}/ext/glm)
 # Include the glm headers:
-include_directories(${GLM_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${GLM_DIR})
 # GLM is a header only library, so no need to link with it
 
 
@@ -38,27 +40,27 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # Include the glfw headers:
-include_directories(${GLFW_DIR}/include)
-# Specify glfw's cmakelists.txt location:
+target_include_directories(${PROJECT_NAME} PUBLIC ${GLFW_DIR}/include)
+# Specify glfw's CMakeLists.txt location:
 add_subdirectory(${GLFW_DIR})
 # Link with GLFW:
+#add_library(glfw ${GLFW_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 
 
 # GLSLANG:
 # Path:
 set(GLSL_DIR ${PROJECT_SOURCE_DIR}/ext/glslang)
-# Specify glslang's cmakelists.txt location:
-add_subdirectory(${GLSL_DIR})
 # Include the glslang headers:
-include_directories(${GLFW_DIR}/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${GLFW_DIR}/include)
+# Specify glslang's CMakeLists.txt location:
+add_subdirectory(${GLSL_DIR})
 # Link with GLSLANG and SPIRV
 target_link_libraries(${PROJECT_NAME} PUBLIC glslang SPIRV)
 
 
 ####################
 # Vulkan:
-find_package(Vulkan REQUIRED)
 set(VULKAN_DIR $ENV{VULKAN_SDK})
 STRING(REGEX REPLACE "\\\\" "/" VULKAN_DIR ${VULKAN_DIR})
 include_directories(${VULKAN_DIR}/Include)

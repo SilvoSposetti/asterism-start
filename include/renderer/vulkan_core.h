@@ -15,7 +15,7 @@ public:
 
     static VkSurfaceKHR createSurface(VkInstance instance, GLFWwindow *window);
 
-    static VkPhysicalDevice createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface);
+    static VkPhysicalDevice createPhysicalDevice(VkInstance instance);
 
     static VkDevice createLogicalDevice(VkPhysicalDevice physicalDevice,
                                         std::vector<const char *> deviceExtensions,

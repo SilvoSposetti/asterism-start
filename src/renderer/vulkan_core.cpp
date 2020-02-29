@@ -8,7 +8,7 @@ VkInstance VulkanCore::createInstance(std::string asterismName, bool isDebug) {
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     applicationInfo.pApplicationName = asterismName.c_str();
-    applicationInfo.apiVersion = VK_VERSION_1_1;
+    applicationInfo.apiVersion = VK_VERSION_1_2;
 
     VkInstanceCreateInfo instanceCreateInfo = {};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -32,6 +32,20 @@ VkInstance VulkanCore::createInstance(std::string asterismName, bool isDebug) {
     instanceCreateInfo.ppEnabledExtensionNames = glfwExtensions;
     instanceCreateInfo.enabledExtensionCount = glfwExtensionCount;
 
+    // Best practices validation extension:
+    if(isDebug){
+        VkValidationFeatureEnableEXT enables[] = {VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+                                                  // The next feature requires a PhysicalDevice that has the feature fragmentStoresAndAtomics and vertexPipelineStoresAndAtomics
+//                                                  VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT// increase featureCount if this is not commented
+        };
+        VkValidationFeaturesEXT features = {};
+        features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        features.enabledValidationFeatureCount = 1;
+        features.pEnabledValidationFeatures = enables;
+
+        instanceCreateInfo.pNext = &features;
+    }
+
     VkInstance instance;
     VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &instance), "Instance Creation");
 
@@ -47,7 +61,7 @@ VkSurfaceKHR VulkanCore::createSurface(VkInstance instance, GLFWwindow *window) 
 }
 
 
-VkPhysicalDevice VulkanCore::createPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
+VkPhysicalDevice VulkanCore::createPhysicalDevice(VkInstance instance) {
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
     // Retrieve available physical devices
@@ -69,7 +83,7 @@ VkPhysicalDevice VulkanCore::createPhysicalDevice(VkInstance instance, VkSurface
         }
     }
 
-    // If a discrete GPU is not available, pick the first one
+//     If a discrete GPU is not available, pick the first one
     if (physicalDevice == VK_NULL_HANDLE) {
         for (const VkPhysicalDevice &possibleDevice : physicalDevices) {
             if (isIntegratedGPU(possibleDevice)) {
@@ -90,6 +104,15 @@ VkPhysicalDevice VulkanCore::createPhysicalDevice(VkInstance instance, VkSurface
 bool VulkanCore::isDiscreteGPU(VkPhysicalDevice device) {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(device, &properties);
+
+    uint32_t version = properties.apiVersion;
+    std::cout << std::endl;
+
+    uint32_t major = VK_VERSION_MAJOR(version);
+    uint32_t minor = VK_VERSION_MINOR(version);
+    uint32_t patch = VK_VERSION_PATCH(version);
+
+    std::cout << major << " " << minor << " " << patch << std::endl;
 
     if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
         log(std::string("Using discrete GPU: ") + properties.deviceName);
