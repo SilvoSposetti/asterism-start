@@ -934,7 +934,6 @@ void Renderer::initializeVulkan() {
 
 //  Buffer
     createDescriptorSetLayout();
-//
 
     createGraphicsPipeline();
 
@@ -1059,7 +1058,7 @@ void Renderer::drawFrame() {
     }
 
     //###################################################
-    // 2. SUpdate the uniform buffers since we now know which image is going to be used
+    // 2. Update the uniform buffers since we now know which image is going to be used
     updateUniformBuffer(imageIndex);
 
 
@@ -1093,7 +1092,7 @@ void Renderer::drawFrame() {
     // 4. Return the image to the swapchain for presentation
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    // Specify which semaphores ot wait on before presentation can happen
+    // Specify which semaphores to wait on before presentation can happen
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
     // Specify which swapchains to present images to and the index of the image for each swapchain

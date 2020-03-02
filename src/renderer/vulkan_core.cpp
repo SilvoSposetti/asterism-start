@@ -33,9 +33,9 @@ VkInstance VulkanCore::createInstance(std::string asterismName, bool isDebug) {
     instanceCreateInfo.enabledExtensionCount = glfwExtensionCount;
 
     // Best practices validation extension:
-    if(isDebug){
+    if (isDebug) {
         VkValidationFeatureEnableEXT enables[] = {VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-                                                  // The next feature requires a PhysicalDevice that has the feature fragmentStoresAndAtomics and vertexPipelineStoresAndAtomics
+                // The next feature requires a PhysicalDevice that has the feature fragmentStoresAndAtomics and vertexPipelineStoresAndAtomics
 //                                                  VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT// increase featureCount if this is not commented
         };
         VkValidationFeaturesEXT features = {};
@@ -96,23 +96,24 @@ VkPhysicalDevice VulkanCore::createPhysicalDevice(VkInstance instance) {
     if (physicalDevice == VK_NULL_HANDLE) {
         throw std::runtime_error("No GPU found");
     }
-    return physicalDevice;
 
+    // Once the device is chosen can print more information about it:
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+    uint32_t apiVersion = properties.apiVersion;
+    uint32_t major = VK_VERSION_MAJOR(apiVersion);
+    uint32_t minor = VK_VERSION_MINOR(apiVersion);
+    uint32_t patch = VK_VERSION_PATCH(apiVersion);
+
+    log("Device supports Vulkan API version " + std::to_string(major) + '.' + std::to_string(minor) + "." + std::to_string(patch));
+    return physicalDevice;
 }
 
 
 bool VulkanCore::isDiscreteGPU(VkPhysicalDevice device) {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(device, &properties);
-
-    uint32_t version = properties.apiVersion;
-    std::cout << std::endl;
-
-    uint32_t major = VK_VERSION_MAJOR(version);
-    uint32_t minor = VK_VERSION_MINOR(version);
-    uint32_t patch = VK_VERSION_PATCH(version);
-
-    std::cout << major << " " << minor << " " << patch << std::endl;
 
     if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
         log(std::string("Using discrete GPU: ") + properties.deviceName);
