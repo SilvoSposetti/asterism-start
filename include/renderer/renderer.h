@@ -29,6 +29,13 @@ class Renderer {
 public:
     void initializeRenderer();
 
+    bool checkLoop();
+    static void rendererPollEvents();
+    void drawFrame();
+    void afterLoop();
+
+    void cleanup();
+
 
 private:
 
@@ -110,7 +117,7 @@ private:
 
     void mainLoop();
 
-    void cleanup();
+
 
     static void frameBufferResizeCallback(GLFWwindow *window, int width, int height);
 
@@ -169,7 +176,6 @@ private:
 
     void updateUniformBuffer(uint32_t currentImageIndex);
 
-    void drawFrame();
 
 
 // This is called 'interleaving' vertex attributes (position and color are interleaved together)

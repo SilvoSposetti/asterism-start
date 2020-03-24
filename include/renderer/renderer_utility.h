@@ -11,12 +11,12 @@ void VK_CHECK(VkResult result, const char *message);
 
 void print(const char *message);
 
-void print(std::string message);
+void print(const std::string& message);
 
 
 void log(const char *message);
 
-void log(std::string message);
+void log(const std::string& message);
 
 
 void logTitle(const char *message);
@@ -24,4 +24,4 @@ void logTitle(const char *message);
 void logTitle(std::string message);
 
 
-std::string padText(std::string text, int maxLineLength);
+std::string padText(const std::string& text, int maxLineLength);

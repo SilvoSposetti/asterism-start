@@ -1,5 +1,7 @@
 #include "renderer/renderer_utility.h"
 
+#include <utility>
+
 void VK_CHECK(VkResult result) {
     VK_CHECK(result, "Unknown");
 }
@@ -17,13 +19,13 @@ void print(const char *message) {
     std::cout << message << std::endl;
 }
 
-void print(std::string message) {
+void print(const std::string& message) {
     std::cout << message << std::endl;
 }
 
 // Prints centered text
-void log(std::string message) {
-    int lineLength = 60;
+void log(const std::string& message) {
+    int lineLength = 80;
 
     int messageLength = message.length();
     int linesNeeded = (int) messageLength / lineLength + 1;
@@ -47,12 +49,14 @@ void log(const char *message) {
 }
 
 void logTitle(std::string message) {
-    std::string newText = message;
-    int n = 5;
+    std::string newText = std::move(message);
+    int n = 10;
     newText.insert(newText.begin(), 1, ' ');
-    newText.insert(newText.begin(), n, '*');
+    newText.insert(newText.begin(), 1, '[');
+    newText.insert(newText.begin(), n, '=');
     newText.insert(newText.end(), 1, ' ');
-    newText.insert(newText.end(), n, '*');
+    newText.insert(newText.end(), 1, ']');
+    newText.insert(newText.end(), n, '=');
     log(newText);
 }
 
@@ -62,7 +66,7 @@ void logTitle(const char *message) {
 }
 
 
-std::string padText(std::string text, int maxLineLength) {
+std::string padText(const std::string& text, int maxLineLength) {
     std::string newText = text;
     int n = (maxLineLength - (int) text.length()) / 2;
     newText.insert(newText.begin(), n, ' ');

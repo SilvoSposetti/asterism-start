@@ -3,8 +3,6 @@
 void Renderer::initializeRenderer() {
     initializeWindow();
     initializeVulkan();
-    mainLoop();
-    cleanup();
 }
 
 void Renderer::initializeWindow() {
@@ -1120,14 +1118,26 @@ void Renderer::drawFrame() {
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void Renderer::mainLoop() {
-    while (!glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS) {
-        glfwPollEvents();
-        drawFrame();
-    }
+bool Renderer::checkLoop() {
+    return !glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS;
+}
+
+void Renderer::rendererPollEvents(){
+    glfwPollEvents();
+}
+
+void Renderer::afterLoop() {
     // When the window is closed, there might still be operations going on. Need to wait until all operations are done
     // before cleaning up resources
     vkDeviceWaitIdle(device);
+}
+
+void Renderer::mainLoop() {
+    while (this->checkLoop()) {
+        this->rendererPollEvents();
+        drawFrame();
+    }
+    this->afterLoop();
 }
 
 void Renderer::cleanup() {
@@ -1153,4 +1163,5 @@ void Renderer::cleanup() {
     vkDestroyInstance(instance, nullptr);
     glfwDestroyWindow(window);
     glfwTerminate();
+    logTitle("Renderer closed without errors");
 }
