@@ -1,4 +1,5 @@
 #include "renderer/renderer.h"
+#include "glm/gtx/string_cast.hpp"
 
 void Renderer::initializeRenderer() {
     initializeWindow();
@@ -37,8 +38,6 @@ void Renderer::frameBufferResizeCallback(GLFWwindow *window, int width, int heig
 
     if (width == 0 or height == 0) {
         logTitle("Window has been minimized");
-    } else {
-        logTitle("Window has been resized (" + std::to_string(width) + "x" + std::to_string(height) + ")");
     }
 }
 
@@ -171,7 +170,7 @@ void Renderer::createSwapchain() {
     swapchainCreateInfo.clipped = VK_TRUE;
     // If a new swapchain is created store a reference to the old one here
     swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
-
+    log("Creating swapchain with size [" + std::to_string(extent.width) + "x" + std::to_string(extent.height) + "]");
     VK_CHECK(vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &swapchain), "Swapchain Creation");
     log("Amount of swapchain images: " + std::to_string(imageCount));
 
@@ -183,6 +182,7 @@ void Renderer::createSwapchain() {
     // Save format and extent of the created swapchain:
     swapchainImageFormat = surfaceFormat.format;
     swapchainExtent = extent;
+
 
 }
 
@@ -1009,14 +1009,14 @@ void Renderer::updateUniformBuffer(uint32_t currentImageIndex) {
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo = {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, .0f));
+    ubo.view = glm::lookAt(glm::vec3(0.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     // It is important to use the current swapchain extent to calculate the aspect ratio
-    ubo.proj = glm::perspective(glm::radians(45.0f), // vertical field of view
-                                swapchainExtent.width /
-                                (float) swapchainExtent.height, // aspect ratio of the screen
-                                0.1f, // near plane distance
-                                10.0f); // far plane distance
+    ubo.proj = glm::perspectiveFov<float>(glm::radians(45.0f), // vertical field of view
+                                          float(swapchainExtent.width),
+                                          float(swapchainExtent.height),
+                                          0.1f, // near plane distance
+                                          10.0f); // far plane distance
 
     // glm was designed with OpenGL in mind, where the y coordinate of the clip coordinates is inverted.
     ubo.proj[1][1] *= -1;
@@ -1104,9 +1104,11 @@ void Renderer::drawFrame() {
 
     VkResult queuePresentResult = vkQueuePresentKHR(*queues.getQueue(PRESENT_QUEUE), &presentInfo);
 
-    if (queuePresentResult == VK_ERROR_OUT_OF_DATE_KHR || queuePresentResult == VK_SUBOPTIMAL_KHR ||
-        frameBufferResized) {
+    if (queuePresentResult == VK_ERROR_OUT_OF_DATE_KHR || queuePresentResult == VK_SUBOPTIMAL_KHR || frameBufferResized) {
+
         frameBufferResized = false;
+//        logTitle("Window has been resized (" + std::to_string(width) + "x" + std::to_string(height) + ")");
+        logTitle("Window has been resized");
         recreateSwapchain();
     } else if (queuePresentResult != VK_SUCCESS) {
         throw std::runtime_error("Failed to present swap chain image");
@@ -1122,7 +1124,7 @@ bool Renderer::checkLoop() {
     return !glfwWindowShouldClose(window) && glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS;
 }
 
-void Renderer::rendererPollEvents(){
+void Renderer::rendererPollEvents() {
     glfwPollEvents();
 }
 
@@ -1132,13 +1134,13 @@ void Renderer::afterLoop() {
     vkDeviceWaitIdle(device);
 }
 
-void Renderer::mainLoop() {
-    while (this->checkLoop()) {
-        this->rendererPollEvents();
-        drawFrame();
-    }
-    this->afterLoop();
-}
+//void Renderer::mainLoop() {
+//    while (this->checkLoop()) {
+//        this->rendererPollEvents();
+//        drawFrame();
+//    }
+//    this->afterLoop();
+//}
 
 void Renderer::cleanup() {
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {

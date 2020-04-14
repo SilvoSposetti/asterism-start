@@ -30,8 +30,11 @@ public:
     void initializeRenderer();
 
     bool checkLoop();
+
     static void rendererPollEvents();
+
     void drawFrame();
+
     void afterLoop();
 
     void cleanup();
@@ -46,7 +49,7 @@ private:
 #ifndef NDEBUG
     const bool isDebug = true;
 #else
-    const bool isDebug  = false;
+    const bool isDebug = false;
 #endif
 
     const std::vector<QueueType> requiredQueues = {GRAPHICS_QUEUE, COMPUTE_QUEUE};
@@ -118,7 +121,6 @@ private:
     void mainLoop();
 
 
-
     static void frameBufferResizeCallback(GLFWwindow *window, int width, int height);
 
     static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -177,7 +179,6 @@ private:
     void updateUniformBuffer(uint32_t currentImageIndex);
 
 
-
 // This is called 'interleaving' vertex attributes (position and color are interleaved together)
     const std::vector<Vertex> vertices = {
             {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -189,7 +190,7 @@ private:
 // Vertex indices for the index buffer
 // either uint16_t or uint32_t can be used depending on the amount of vertices used (>=65535)
     const std::vector<uint16_t> vertexIndices = {
-            0, 1, 2, 2, 3, 0
+            0, 2, 1, 0, 3, 2
     };
 
 

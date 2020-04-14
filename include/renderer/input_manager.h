@@ -38,17 +38,6 @@ public:
             eventHandlingInstance->mouseScrollCallback(window, offsetX, offsetY);
     }
 
-
-private:
-    // Fullscreen functionality
-    bool isFullScreen = false;
-    int lastWindowedPosY;
-    int lastWindowedPosX;
-    int lastWindowedWidth;
-    int lastWindowedHeight;
-
-    void toggleFullscreen(GLFWwindow *window);
-
     // Mouse position
     double posX;
     double posY;
@@ -61,6 +50,18 @@ private:
     // Mouse scroll
     double offsetX;
     double offsetY;
+
+private:
+    // Fullscreen functionality
+    bool isFullScreen = false;
+    int lastWindowedPosY;
+    int lastWindowedPosX;
+    int lastWindowedWidth;
+    int lastWindowedHeight;
+
+    void toggleFullscreen(GLFWwindow *window);
+
+
 
     // Member functions that are called from the dispatchers with the proper InputManager handling instance
     void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods);
