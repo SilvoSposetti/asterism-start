@@ -18,7 +18,7 @@
 
 #include "vulkan_core.h"
 #include "queue_manager.h"
-#include "vertex.h"
+#include "drawable/vertex.h"
 #include "shader_manager.h"
 #include "swapchain_support_details.h"
 #include "renderer_utility.h"
@@ -118,8 +118,6 @@ private:
 
     void initializeVulkan();
 
-    void mainLoop();
-
 
     static void frameBufferResizeCallback(GLFWwindow *window, int width, int height);
 
@@ -181,10 +179,10 @@ private:
 
 // This is called 'interleaving' vertex attributes (position and color are interleaved together)
     const std::vector<Vertex> vertices = {
-            {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-            {{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}},
-            {{0.5f,  0.5f},  {0.0f, 0.0f, 1.0f}},
-            {{-0.5f, 0.5f},  {1.0f, 1.0f, 1.0f}}
+            {{-0.5f, 0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+            {{0.5f,  0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+            {{0.5f,  0.0f, 0.5f},  {0.0f, 0.0f, 1.0f}},
+            {{-0.5f, 0.0f, 0.5f},  {1.0f, 1.0f, 1.0f}}
     };
 
 // Vertex indices for the index buffer

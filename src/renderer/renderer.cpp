@@ -500,6 +500,7 @@ void Renderer::createGraphicsPipeline() {
 
     //###################################################
     // Pipeline:
+    // ToDo: get shader create_infos here from shaderManager
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.stageCount = 2;
@@ -879,6 +880,7 @@ void Renderer::createCommandBuffers() {
         // firstVertex defines the lowest value of gl_VertexIndex
         // firstInstance defines the lowest value of gl_InstanceIndex
         vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(vertexIndices.size()), 1, 0, 0, 0);
+//        vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(vertices.size()), 1, 0, 0);
         // End render pass:
         vkCmdEndRenderPass(commandBuffers[i]);
 

@@ -5,15 +5,15 @@ void Scene::run() {
     this->frameCount = 0;
     this->dt = 0.0;
 
-    this->initializeCore();
     this->setup();
+    this->initializeCore();
     this->core();
 }
 
 
 void Scene::core() {
 
-    while(this->renderer->checkLoop()){
+    while (this->renderer->checkLoop()) {
         this->renderer->rendererPollEvents();
 
         auto start = std::chrono::high_resolution_clock::now();
@@ -30,8 +30,6 @@ void Scene::core() {
         this->frameCount++;
     }
     this->renderer->afterLoop();
-
-
 
     this->terminateCore();
 }

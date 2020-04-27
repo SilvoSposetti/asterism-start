@@ -29,7 +29,6 @@ struct OrthogonalParams {
 class Camera {
 public:
     Camera(ViewParams viewParams, PerspectiveParams perspectiveParams);
-
     Camera(ViewParams viewParams, OrthogonalParams orthogonalParams);
 
 private:

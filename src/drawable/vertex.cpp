@@ -1,4 +1,4 @@
-#include "renderer/vertex.h"
+#include "drawable/vertex.h"
 
 VkVertexInputBindingDescription Vertex::getBindingDescription() {
     // All of the per-vertex data is packed into one array, so only one binding
@@ -24,7 +24,7 @@ std::array<VkVertexInputAttributeDescription, 2> Vertex::getAttributeDescription
     // vec2: VK_FORMAT_R32G32_SFLOAT
     // vec3: VK_FORMAT_R32G32B32_SFLOAT
     // vec4: VK_FORMAT_R32G32B32A32_SFLOAT
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
     // 'offset' specifies the offset from the beginning of the struct
     attributeDescriptions[0].offset = offsetof(Vertex, pos);
 

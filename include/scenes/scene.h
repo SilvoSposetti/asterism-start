@@ -6,13 +6,19 @@
 class Scene {
 public:
 
-    void run();
 
     std::shared_ptr<Renderer> renderer;
     uint32_t frameCount;
     double_t dt;
 
+    void run();
+
+    // Submits draw/other commands to the Renederer, maybe better in the subclasses
+    //    virtual void submit(Camera c, Drawable d) = 0;
+
 private:
+
+
 
     // These functions differ for each type of scene (e.g 2D, 3D, etc...)
     virtual void initializeCore() = 0;
