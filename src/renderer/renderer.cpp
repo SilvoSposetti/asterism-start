@@ -861,7 +861,6 @@ void Renderer::createCommandBuffers() {
 
         // Also, the index buffer: (index type must be specified accordingly)
         vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
         // Also, the uniform buffer:
         vkCmdBindDescriptorSets(commandBuffers[i],
                                 VK_PIPELINE_BIND_POINT_GRAPHICS, // unlike vertex and index buffers, descriptor sets are not unique to graphics pipelines, thus need to specify

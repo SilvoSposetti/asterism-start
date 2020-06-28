@@ -13,7 +13,7 @@ public:
 
     void run();
 
-    // Submits draw/other commands to the Renederer, maybe better in the subclasses
+    // Submits draw/other commands to the Renderer, maybe better in the subclasses
     //    virtual void submit(Camera c, Drawable d) = 0;
 
 private:

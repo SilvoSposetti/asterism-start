@@ -8,7 +8,7 @@
 
 class Drawable {
 public:
-//    virtual void draw(Camera camera) = 0;
+    void draw(Camera camera);
 
     void setShader(int shader);
 
@@ -18,7 +18,7 @@ public:
 
     void setRotation(float angle, glm::vec3 axis);
 
-    void setScaling(glm::vec3 scale);
+    void setScale(glm::vec3 scale);
 
 protected:
     std::vector<Vertex> vertices;

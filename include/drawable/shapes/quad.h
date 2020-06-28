@@ -4,5 +4,5 @@
 
 class Quad : public virtual Shape {
 public:
-    Quad(void);
+    Quad();
 };
